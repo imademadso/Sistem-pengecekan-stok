@@ -1,24 +1,54 @@
-import { AuditSession, AuditReportSummary, StockItem } from '../types/stock';
+import { AuditSession, AuditReportSummary, StockItem, AuthUser, UserRole } from '../types/stock';
 import { RAW_SAMPLE_ITEMS, cleanAndSortItemsAZ } from './sampleData';
 
 const STORAGE_ACTIVE_SESSION_KEY = 'stok_opname_active_session_v1';
 const STORAGE_REPORTS_KEY = 'stok_opname_reports_v1';
-const STORAGE_ROLE_KEY = 'stok_opname_user_role_v1';
+const STORAGE_AUTH_USER_KEY = 'stok_opname_auth_user_v1';
 
-export function getStoredRole(): 'ADMIN' | 'USER_CHECKER' {
+// Predefined accounts
+export const PREDEFINED_ACCOUNTS = [
+  {
+    username: 'admin',
+    password: '123',
+    name: 'Budi Santoso',
+    role: 'ADMIN' as UserRole,
+    title: 'Admin Gudang & Stok',
+  },
+  {
+    username: 'petugas',
+    password: '123',
+    name: 'Ahmad Fauzi',
+    role: 'USER_CHECKER' as UserRole,
+    title: 'Petugas Cek / Checker Lapangan',
+  },
+];
+
+export function getStoredAuthUser(): AuthUser | null {
   try {
-    const val = localStorage.getItem(STORAGE_ROLE_KEY);
-    return val === 'USER_CHECKER' ? 'USER_CHECKER' : 'ADMIN';
+    const val = localStorage.getItem(STORAGE_AUTH_USER_KEY);
+    if (val) {
+      return JSON.parse(val);
+    }
   } catch {
-    return 'ADMIN';
+    return null;
   }
+  // Default to ADMIN for instant ease of use or null for login screen
+  return {
+    username: 'admin',
+    name: 'Budi Santoso',
+    role: 'ADMIN',
+  };
 }
 
-export function saveStoredRole(role: 'ADMIN' | 'USER_CHECKER') {
+export function saveStoredAuthUser(user: AuthUser | null) {
   try {
-    localStorage.setItem(STORAGE_ROLE_KEY, role);
+    if (user) {
+      localStorage.setItem(STORAGE_AUTH_USER_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(STORAGE_AUTH_USER_KEY);
+    }
   } catch (e) {
-    console.error('Failed to save role', e);
+    console.error('Failed to save auth user', e);
   }
 }
 

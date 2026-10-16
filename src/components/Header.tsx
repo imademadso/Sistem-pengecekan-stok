@@ -7,7 +7,8 @@ import {
   History, 
   PlusCircle, 
   Download, 
-  RotateCcw
+  RotateCcw,
+  Users
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -19,6 +20,8 @@ interface HeaderProps {
   onDownloadTemplate: () => void;
   onResetSession: () => void;
   reportCount: number;
+  onOpenUserManagement?: () => void;
+  userName?: string;
 }
 
 export function Header({
@@ -30,6 +33,8 @@ export function Header({
   onDownloadTemplate,
   onResetSession,
   reportCount,
+  onOpenUserManagement,
+  userName,
 }: HeaderProps) {
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs">
@@ -90,40 +95,55 @@ export function Header({
               </button>
             </div>
 
-            {/* Role Switcher Pill */}
-            <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
-              <span className="text-[11px] font-medium text-slate-400 px-2 hidden sm:inline">
-                Peran:
-              </span>
-              <button
-                onClick={() => onRoleChange('ADMIN')}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                  currentRole === 'ADMIN'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-                title="Beralih ke peran Admin (Input Data, Beri Tanda Terlewat, Validasi)"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Admin</span>
-              </button>
-              <button
-                onClick={() => onRoleChange('USER_CHECKER')}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                  currentRole === 'USER_CHECKER'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-                title="Beralih ke peran User / Petugas Cek (Mengecek dan mencentang barang di lapangan)"
-              >
-                <UserCheck className="w-3.5 h-3.5" />
-                <span>User (Petugas Cek)</span>
-              </button>
-            </div>
+            {/* User Profile Badge & Restricted Access Indicator */}
+            {currentRole === 'ADMIN' ? (
+              <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 py-1 px-2.5 rounded-lg">
+                <div className="w-6 h-6 rounded-md bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                </div>
+                <div className="text-left">
+                  <div className="text-[11px] font-bold text-indigo-950 leading-tight">
+                    {userName || 'Admin Gudang'}
+                  </div>
+                  <div className="text-[9px] text-indigo-600 font-medium">Akses Admin</div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 py-1 px-2.5 rounded-lg">
+                <div className="w-6 h-6 rounded-md bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
+                  <UserCheck className="w-3.5 h-3.5" />
+                </div>
+                <div className="text-left">
+                  <div className="text-[11px] font-bold text-blue-950 leading-tight">
+                    {userName || 'Petugas Cek'}
+                  </div>
+                  <div className="text-[9px] text-blue-600 font-medium">Hanya Pengecekan Barang</div>
+                </div>
+              </div>
+            )}
 
-            {/* Admin Action Buttons */}
+            {/* Logout / Ganti Akun Button */}
+            <button
+              onClick={() => onRoleChange('ADMIN')} // will trigger login modal in parent
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
+              title="Keluar atau Ganti Akun"
+            >
+              <span>Ganti Akun</span>
+            </button>
+
+            {/* Admin Action Buttons (Only visible to Admin) */}
             {currentRole === 'ADMIN' && (
               <div className="flex items-center gap-2">
+                {/* User Settings Button (Admin Only) */}
+                <button
+                  onClick={onOpenUserManagement}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-900 text-xs font-bold shadow-xs transition-colors"
+                  title="Pengaturan nama pengguna, hak akses, dan akun (Hanya Admin)"
+                >
+                  <Users className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Pengaturan User</span>
+                </button>
+
                 <button
                   onClick={onOpenInputModal}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors"
@@ -143,14 +163,16 @@ export function Header({
               </div>
             )}
 
-            {/* Quick Reset session if needed */}
-            <button
-              onClick={onResetSession}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              title="Reset ke Data Contoh Standar"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
+            {/* Quick Reset session (Admin only) */}
+            {currentRole === 'ADMIN' && (
+              <button
+                onClick={onResetSession}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                title="Reset ke Data Contoh Standar"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )}
 
           </div>
         </div>

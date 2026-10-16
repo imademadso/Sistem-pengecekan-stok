@@ -286,34 +286,34 @@ export function StockTable({
             <tr className="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200 select-none">
               <th className="py-3 px-3 w-12 text-center text-slate-400">#</th>
               <th className="py-3 px-3 min-w-[120px] uppercase tracking-wider text-[11px]">
-                1. Kode Item
+                Kode Item
               </th>
               <th className="py-3 px-4 min-w-[240px] uppercase tracking-wider text-[11px]">
                 <div className="flex items-center gap-1.5">
-                  <span>2. Nama Item</span>
+                  <span>Nama Item</span>
                   <span className="text-[10px] font-normal px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-700 flex items-center gap-0.5">
                     <ArrowUpDown className="w-2.5 h-2.5" /> A-Z
                   </span>
                 </div>
               </th>
               <th className="py-3 px-3 text-right min-w-[110px] uppercase tracking-wider text-[11px] text-slate-700">
-                3. Pusat
+                Pusat
               </th>
               <th className="py-3 px-3 text-right min-w-[125px] uppercase tracking-wider text-[11px] bg-slate-50/50">
                 <div className="flex flex-col items-end">
-                  <span>4. Sempu</span>
+                  <span>Sempu</span>
                   <span className="text-[9px] font-normal text-slate-400">Tanda &le; {thresholdN}</span>
                 </div>
               </th>
               <th className="py-3 px-3 text-right min-w-[125px] uppercase tracking-wider text-[11px] bg-slate-50/50">
                 <div className="flex flex-col items-end">
-                  <span>5. Pilar</span>
+                  <span>Pilar</span>
                   <span className="text-[9px] font-normal text-slate-400">Tanda &le; {thresholdN}</span>
                 </div>
               </th>
               <th className="py-3 px-3 text-right min-w-[125px] uppercase tracking-wider text-[11px] bg-slate-50/50">
                 <div className="flex flex-col items-end">
-                  <span>6. Serang</span>
+                  <span>Serang</span>
                   <span className="text-[9px] font-normal text-slate-400">Tanda &le; {thresholdN}</span>
                 </div>
               </th>

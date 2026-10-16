@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Users collection: read/write for user login & account management
+    match /users/{userId} {
+      allow read, write: if isValidId(userId);
+    }
+
+    // Sessions collection: real-time 2-way sync for stock check sessions
+    match /sessions/{sessionId} {
+      allow read, write: if isValidId(sessionId);
+
+      // Subcollection for individual stock items
+      match /items/{itemId} {
+        allow read, write: if isValidId(itemId);
+      }
+    }
+
+    // Reports collection: saved audit reports
+    match /reports/{reportId} {
+      allow read, write: if isValidId(reportId);
+    }
+
+    // Global default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

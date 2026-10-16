@@ -52,3 +52,10 @@ export interface AuditReportSummary {
 }
 
 export type UserRole = 'ADMIN' | 'USER_CHECKER';
+
+export interface AuthUser {
+  username: string;
+  name: string;
+  role: UserRole;
+  avatar?: string;
+}

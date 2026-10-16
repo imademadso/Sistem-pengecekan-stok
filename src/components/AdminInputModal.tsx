@@ -312,7 +312,7 @@ export function AdminInputModal({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    1. Kode Item
+                    Kode Item
                   </label>
                   <input
                     type="text"
@@ -326,7 +326,7 @@ export function AdminInputModal({
 
                 <div className="col-span-2">
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    2. Nama Item
+                    Nama Item
                   </label>
                   <input
                     type="text"
@@ -340,7 +340,7 @@ export function AdminInputModal({
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    3. Pusat
+                    Pusat
                   </label>
                   <input
                     type="number"
@@ -353,7 +353,7 @@ export function AdminInputModal({
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    4. Sempu
+                    Sempu
                   </label>
                   <input
                     type="number"
@@ -366,7 +366,7 @@ export function AdminInputModal({
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    5. Pilar
+                    Pilar
                   </label>
                   <input
                     type="number"
@@ -379,7 +379,7 @@ export function AdminInputModal({
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                    6. Serang
+                    Serang
                   </label>
                   <input
                     type="number"

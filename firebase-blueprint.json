@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "UserAccount": {
+      "title": "UserAccount",
+      "description": "User profile and credentials for login in stock checking system",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string", "maxLength": 50 },
+        "name": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "enum": ["ADMIN", "USER_CHECKER"] },
+        "password": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["username", "name", "role"]
+    },
+    "StockCheckSession": {
+      "title": "StockCheckSession",
+      "description": "Stock check audit session data",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 100 },
+        "judul": { "type": "string", "maxLength": 200 },
+        "tanggalDibuat": { "type": "string" },
+        "thresholdN": { "type": "number" },
+        "status": { "type": "string", "enum": ["DRAFT", "SEDANG_DICEK", "PERLU_REVISI", "TERVALIDASI"] },
+        "namaAdmin": { "type": "string", "maxLength": 100 },
+        "namaChecker": { "type": "string", "maxLength": 100 },
+        "tanggalValidasi": { "type": "string" },
+        "catatanValidasi": { "type": "string", "maxLength": 500 },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "judul", "thresholdN", "status"]
+    },
+    "StockItemDoc": {
+      "title": "StockItemDoc",
+      "description": "Individual item in the 6-column stock checking table",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 100 },
+        "kodeItem": { "type": "string", "maxLength": 50 },
+        "namaItem": { "type": "string", "maxLength": 200 },
+        "stokPusat": { "type": "number" },
+        "stokToko1": { "type": "number" },
+        "stokToko2": { "type": "number" },
+        "stokToko3": { "type": "number" },
+        "isChecked": { "type": "boolean" },
+        "checkedAt": { "type": "string" },
+        "checkedBy": { "type": "string", "maxLength": 100 },
+        "adminFlagged": { "type": "boolean" },
+        "adminNote": { "type": "string", "maxLength": 500 },
+        "userNote": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["id", "kodeItem", "namaItem", "stokPusat", "stokToko1", "stokToko2", "stokToko3", "isChecked"]
+    },
+    "AuditReportDoc": {
+      "title": "AuditReportDoc",
+      "description": "Finalized validated stock audit report",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 100 },
+        "sessionId": { "type": "string", "maxLength": 100 },
+        "judul": { "type": "string", "maxLength": 200 },
+        "tanggalSelesai": { "type": "string" },
+        "namaAdmin": { "type": "string", "maxLength": 100 },
+        "namaChecker": { "type": "string", "maxLength": 100 },
+        "thresholdN": { "type": "number" },
+        "totalItem": { "type": "number" },
+        "totalDicek": { "type": "number" },
+        "totalPusat": { "type": "number" },
+        "totalToko1": { "type": "number" },
+        "totalToko2": { "type": "number" },
+        "totalToko3": { "type": "number" },
+        "kritisToko1": { "type": "number" },
+        "kritisToko2": { "type": "number" },
+        "kritisToko3": { "type": "number" },
+        "catatanAdmin": { "type": "string", "maxLength": 500 }
+      },
+      "required": ["id", "sessionId", "judul", "tanggalSelesai", "namaAdmin", "totalItem", "totalDicek"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserAccount" },
+      "description": "User profiles and credentials"
+    },
+    "/sessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/StockCheckSession" },
+      "description": "Active stock checking sessions"
+    },
+    "/sessions/{sessionId}/items/{itemId}": {
+      "schema": { "$ref": "#/entities/StockItemDoc" },
+      "description": "Real-time individual stock checking items"
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/AuditReportDoc" },
+      "description": "Finalized audit reports"
+    }
+  }
+}

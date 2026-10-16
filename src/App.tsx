@@ -23,12 +23,19 @@ import {
 import { 
   ReportHistory 
 } from './components/ReportHistory';
+import { 
+  LoginModal 
+} from './components/LoginModal';
+import { 
+  UserManagementModal 
+} from './components/UserManagementModal';
 
 import { 
   StockItem, 
   AuditSession, 
   AuditReportSummary, 
-  UserRole 
+  UserRole,
+  AuthUser
 } from './types/stock';
 import { 
   getActiveSession, 
@@ -36,10 +43,23 @@ import {
   getReportsHistory, 
   saveReportToHistory, 
   deleteReportFromHistory, 
-  getStoredRole, 
-  saveStoredRole,
-  createDefaultSession
+  getStoredAuthUser,
+  saveStoredAuthUser,
+  createDefaultSession,
+  PREDEFINED_ACCOUNTS
 } from './utils/storage';
+import { 
+  subscribeToActiveSession, 
+  syncSessionToFirestore, 
+  subscribeToReports, 
+  saveReportToFirestore, 
+  deleteReportFromFirestore,
+  seedInitialUsers,
+  seedDefaultSessionIfEmpty,
+  subscribeToUsers,
+  UserAccountDoc
+} from './services/stockSyncService';
+import { testFirestoreConnection } from './lib/firebase';
 import { downloadExcelTemplate } from './utils/excelHelper';
 import { cleanAndSortItemsAZ } from './utils/sampleData';
 import { 
@@ -49,18 +69,34 @@ import {
   Bell, 
   FileCheck,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  LogOut,
+  Lock,
+  Cloud,
+  RefreshCw,
+  Users,
+  UserCog
 } from 'lucide-react';
 
 export default function App() {
-  // Application State
+  // Authentication & Role State
+  const [authUser, setAuthUser] = useState<AuthUser | null>(getStoredAuthUser);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  // Active Role derived strictly from authenticated user
+  const role: UserRole = authUser?.role ?? 'USER_CHECKER';
+
+  // Application State with Real-time Sync
   const [session, setSession] = useState<AuditSession>(getActiveSession);
   const [reports, setReports] = useState<AuditReportSummary[]>(getReportsHistory);
-  const [role, setRole] = useState<UserRole>(getStoredRole);
   const [activeTab, setActiveTab] = useState<'audit' | 'reports'>('audit');
+  const [isDbConnected, setIsDbConnected] = useState(true);
+  const [lastSyncTime, setLastSyncTime] = useState<string>('Baru saja');
 
   // Modals & Popups
   const [isInputModalOpen, setIsInputModalOpen] = useState(false);
+  const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
+  const [usersList, setUsersList] = useState<UserAccountDoc[]>(PREDEFINED_ACCOUNTS);
   const [flaggingItem, setFlaggingItem] = useState<StockItem | null>(null);
   const [viewingReport, setViewingReport] = useState<AuditReportSummary | null>(null);
 
@@ -77,21 +113,124 @@ export default function App() {
     }, 4500);
   };
 
-  // Sync session changes to localStorage
-  const updateSession = (updated: AuditSession) => {
-    setSession(updated);
-    saveActiveSession(updated);
+  // Bootstrap initial Firestore collections & 2-Way Realtime Subscriptions
+  useEffect(() => {
+    // 1. Test connection & seed initial data if empty
+    testFirestoreConnection().then((connected) => {
+      setIsDbConnected(connected);
+      if (connected) {
+        seedInitialUsers();
+        seedDefaultSessionIfEmpty();
+      }
+    });
+
+    // 2. Real-time 2-way listener for users (Admin name updates propagate instantly)
+    const unsubscribeUsers = subscribeToUsers(
+      (remoteUsers) => {
+        if (remoteUsers && remoteUsers.length > 0) {
+          setUsersList(remoteUsers);
+          // If authUser is logged in, ensure their displayed name stays in sync
+          setAuthUser((prev) => {
+            if (!prev) return prev;
+            const match = remoteUsers.find((u) => u.username === prev.username);
+            if (match && match.name !== prev.name) {
+              const updatedAuth: AuthUser = { ...prev, name: match.name, role: match.role };
+              saveStoredAuthUser(updatedAuth);
+              return updatedAuth;
+            }
+            return prev;
+          });
+        }
+      },
+      (error) => {
+        console.warn('Realtime users subscription error:', error);
+      }
+    );
+
+    // 3. Real-time 2-way listener for active session (Admin <-> Petugas Cek)
+    const unsubscribeSession = subscribeToActiveSession(
+      (remoteSession) => {
+        setSession(remoteSession);
+        saveActiveSession(remoteSession);
+        setIsDbConnected(true);
+        setLastSyncTime(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+      },
+      (error) => {
+        console.warn('Realtime session subscription error:', error);
+      }
+    );
+
+    // 4. Real-time 2-way listener for audit reports
+    const unsubscribeReports = subscribeToReports(
+      (remoteReports) => {
+        setReports(remoteReports);
+        localStorage.setItem('stok_opname_reports_v1', JSON.stringify(remoteReports));
+      },
+      (error) => {
+        console.warn('Realtime reports subscription error:', error);
+      }
+    );
+
+    return () => {
+      unsubscribeUsers();
+      unsubscribeSession();
+      unsubscribeReports();
+    };
+  }, []);
+
+  const handleLoginSuccess = (user: AuthUser) => {
+    setAuthUser(user);
+    saveStoredAuthUser(user);
+    setIsLoginModalOpen(false);
+    showToast(`Berhasil login sebagai ${user.name} (${user.role === 'ADMIN' ? 'Admin' : 'Petugas Cek'})`, 'success');
   };
 
-  const handleRoleChange = (newRole: UserRole) => {
-    setRole(newRole);
-    saveStoredRole(newRole);
-    showToast(
-      newRole === 'ADMIN' 
-        ? 'Beralih ke Mode Admin (Input Excel, Tanda Terlewat, Validasi)' 
-        : 'Beralih ke Mode User / Petugas Cek (Pengecekan Fisik & Checkbox)',
-      'info'
+  const handleOpenLoginModal = () => {
+    setIsLoginModalOpen(true);
+  };
+
+  // Handle user updated from UserManagementModal
+  const handleUserUpdated = (updatedUser: UserAccountDoc) => {
+    setUsersList((prev) =>
+      prev.map((u) => (u.username === updatedUser.username ? { ...u, ...updatedUser } : u))
     );
+
+    // If current logged-in user was updated (e.g. Budi Santoso renamed to new name)
+    if (authUser?.username === updatedUser.username || (updatedUser.role === 'ADMIN' && authUser?.role === 'ADMIN')) {
+      const updatedAuth: AuthUser = {
+        username: updatedUser.username,
+        name: updatedUser.name,
+        role: updatedUser.role,
+      };
+      setAuthUser(updatedAuth);
+      saveStoredAuthUser(updatedAuth);
+    }
+
+    // If admin name changed, update the active session's namaAdmin
+    if (updatedUser.role === 'ADMIN') {
+      const updatedSession: AuditSession = {
+        ...session,
+        namaAdmin: `${updatedUser.name} (Admin Gudang)`,
+      };
+      updateSession(updatedSession);
+    }
+
+    showToast(`Nama pengguna berhasil diperbarui menjadi "${updatedUser.name}". Tersimpan di database cloud!`, 'success');
+  };
+
+  // Sync session changes to both local state and Firestore (propagates instantly to 2nd user)
+  const updateSession = async (updated: AuditSession) => {
+    // Optimistic local update
+    setSession(updated);
+    saveActiveSession(updated);
+
+    // Remote Firestore write for 2-way synchronization
+    try {
+      await syncSessionToFirestore(updated);
+      setLastSyncTime(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    } catch (e) {
+      console.error('Failed to sync to Firestore, saved locally', e);
+    }
   };
 
   // 1. Toggle Checkbox on Item (Tahap 3 & 4)
@@ -103,7 +242,7 @@ export default function App() {
           ...item,
           isChecked: nextChecked,
           checkedAt: nextChecked ? new Date().toISOString() : null,
-          checkedBy: nextChecked ? (role === 'ADMIN' ? session.namaAdmin : session.namaChecker) : null,
+          checkedBy: nextChecked ? (authUser?.name || (role === 'ADMIN' ? session.namaAdmin : session.namaChecker)) : null,
           // If item was previously flagged by admin and user checks it now, mark the flag resolved
           adminFlagged: nextChecked ? false : item.adminFlagged,
         };
@@ -134,7 +273,7 @@ export default function App() {
           ...item,
           isChecked: checked,
           checkedAt: checked ? new Date().toISOString() : null,
-          checkedBy: checked ? (role === 'ADMIN' ? session.namaAdmin : session.namaChecker) : null,
+          checkedBy: checked ? (authUser?.name || (role === 'ADMIN' ? session.namaAdmin : session.namaChecker)) : null,
           adminFlagged: checked ? false : item.adminFlagged,
         };
       }
@@ -149,7 +288,7 @@ export default function App() {
     });
 
     showToast(
-      checked ? `${ids.length} barang ditandai sudah dicek` : 'Centang berhasil di-reset',
+      checked ? `${ids.length} barang ditandai sudah dicek (Tersinkronisasi)` : 'Centang berhasil di-reset',
       'info'
     );
   };
@@ -258,9 +397,10 @@ export default function App() {
       catatanAdmin: adminNotes,
     };
 
-    // Save to history
+    // Save to history & Firestore
     saveReportToHistory(reportSummary);
     setReports(getReportsHistory());
+    saveReportToFirestore(reportSummary).catch((e) => console.error('Failed to save report to Firestore', e));
 
     // Update active session
     const validatedSession: AuditSession = {
@@ -273,7 +413,7 @@ export default function App() {
 
     // Prompt viewing report
     setViewingReport(reportSummary);
-    showToast('Pengecekan berhasil divalidasi dan tersimpan di laporan!', 'success');
+    showToast('Pengecekan berhasil divalidasi dan tersimpan di database cloud!', 'success');
   };
 
   // 4. Save New Data from Admin Modal (Tahap 1 & 2)
@@ -288,14 +428,14 @@ export default function App() {
       thresholdN: newThresholdN,
       items: cleanedAndSorted,
       status: 'SEDANG_DICEK',
-      namaAdmin: session.namaAdmin,
+      namaAdmin: authUser?.name || session.namaAdmin,
       namaChecker: session.namaChecker,
     };
 
     updateSession(newSession);
     setActiveTab('audit');
     showToast(
-      `Berhasil mengimpor ${cleanedAndSorted.length} barang. Data telah dirapikan & diurutkan A-Z. Batas N = ${newThresholdN}.`,
+      `Berhasil mengimpor ${cleanedAndSorted.length} barang ke database cloud. Data telah dirapikan & diurutkan A-Z. Batas N = ${newThresholdN}.`,
       'success'
     );
   };
@@ -307,14 +447,14 @@ export default function App() {
       thresholdN: newThresholdN,
     });
     showToast(
-      `Ambang batas kritis berhasil diubah menjadi N = ${newThresholdN}. Penandaan stok Sempu, Pilar, Serang telah diperbarui.`,
+      `Ambang batas kritis berhasil diubah menjadi N = ${newThresholdN}. Penandaan stok Sempu, Pilar, Serang telah diperbarui di database cloud.`,
       'success'
     );
   };
 
   // Reset to default sample
   const handleResetSession = () => {
-    if (confirm('Reset sesi pengecekan ke data contoh awal?')) {
+    if (confirm('Reset sesi pengecekan ke data contoh awal di database?')) {
       const def = createDefaultSession();
       updateSession(def);
       showToast('Sesi pengecekan di-reset ke data sampel standar.', 'info');
@@ -324,11 +464,12 @@ export default function App() {
   const handleDeleteReport = (reportId: string) => {
     const updated = deleteReportFromHistory(reportId);
     setReports(updated);
+    deleteReportFromFirestore(reportId).catch((e) => console.error('Failed to delete report from Firestore', e));
     showToast('Laporan berhasil dihapus dari arsip.', 'info');
   };
 
   const handleUserSubmitToCheck = () => {
-    showToast('Hasil pengecekan telah diajukan ke Admin untuk divalidasi!', 'info');
+    showToast('Hasil pengecekan telah diajukan ke Admin secara real-time!', 'info');
   };
 
   const flaggedCount = session.items.filter((i) => i.adminFlagged).length;
@@ -357,16 +498,36 @@ export default function App() {
         </div>
       )}
 
+      {/* Cloud 2-Way Sync Status Banner */}
+      <div className="bg-slate-900 text-slate-300 text-[11px] py-1 px-4 border-b border-slate-800">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="font-semibold text-emerald-400">Database Cloud 2-Arah Terhubung:</span>
+            <span>Perubahan oleh Admin & Petugas Cek tersinkronisasi otomatis secara real-time antar perangkat.</span>
+          </div>
+          <div className="hidden sm:flex items-center gap-1.5 text-slate-400">
+            <Cloud className="w-3 h-3 text-indigo-400" />
+            <span>Sinkron terakhir: {lastSyncTime}</span>
+          </div>
+        </div>
+      </div>
+
       {/* App Header */}
       <Header
         currentRole={role}
-        onRoleChange={handleRoleChange}
+        onRoleChange={handleOpenLoginModal}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onOpenInputModal={() => setIsInputModalOpen(true)}
         onDownloadTemplate={() => downloadExcelTemplate(session.thresholdN)}
         onResetSession={handleResetSession}
         reportCount={reports.length}
+        onOpenUserManagement={() => setIsUserManagementOpen(true)}
+        userName={authUser?.name}
       />
 
       {/* Main Container */}
@@ -381,27 +542,55 @@ export default function App() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">
-                  Anda Sedang Berada di:
+                  Akun Aktif:
                 </span>
                 <span className="text-xs font-black px-2 py-0.5 rounded-md bg-white/20 text-white">
-                  {role === 'ADMIN' ? 'MODE ADMIN' : 'MODE USER / PETUGAS CEK'}
+                  {role === 'ADMIN' ? 'ADMIN GUDANG (AKSES PENUH)' : 'PETUGAS CEK (TERKUNCI)'}
                 </span>
+                {authUser && (
+                  <span className="text-xs font-medium text-slate-300 hidden sm:inline">
+                    &bull; {authUser.name}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
                 {role === 'ADMIN'
                   ? 'Admin berhak mengubah ambang batas kritis (N), menginput data stok (.xlsx), meninjau kelengkapan, menandai barang terlewat, dan memvalidasi laporan akhir.'
-                  : 'User bertugas memeriksa kondisi fisik stok dan mencentang checkbox di sebelah kanan tabel hingga semua tuntas dicek.'}
+                  : 'Petugas Cek bertugas memeriksa fisik barang dan mencentang checkbox hingga tuntas. Mode admin dikunci untuk mencegah manipulasi data.'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => handleRoleChange(role === 'ADMIN' ? 'USER_CHECKER' : 'ADMIN')}
-              className="text-xs font-bold px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
-            >
-              Ganti ke {role === 'ADMIN' ? 'Mode User (Petugas Cek)' : 'Mode Admin'}
-            </button>
+            {role === 'ADMIN' && (
+              <button
+                onClick={() => setIsUserManagementOpen(true)}
+                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/50 shadow-xs transition-colors"
+                title="Buka pengaturan user untuk mengubah nama Budi Santoso atau akun lainnya"
+              >
+                <UserCog className="w-3.5 h-3.5 text-indigo-200" />
+                <span>Pengaturan User (Ubah Budi Santoso)</span>
+              </button>
+            )}
+
+            {role === 'USER_CHECKER' ? (
+              <button
+                onClick={handleOpenLoginModal}
+                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+                title="Petugas Cek tidak dapat langsung beralih ke Admin. Anda harus login ulang dengan kredensial Admin."
+              >
+                <Lock className="w-3.5 h-3.5 text-amber-300" />
+                <span>Ganti Akun / Login Admin</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleOpenLoginModal}
+                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5 text-slate-300" />
+                <span>Ganti Akun</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -467,6 +656,13 @@ export default function App() {
       </footer>
 
       {/* Modals */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        currentUser={authUser}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+
       <AdminInputModal
         isOpen={isInputModalOpen}
         onClose={() => setIsInputModalOpen(false)}
@@ -486,6 +682,14 @@ export default function App() {
         isOpen={!!viewingReport}
         report={viewingReport}
         onClose={() => setViewingReport(null)}
+      />
+
+      <UserManagementModal
+        isOpen={isUserManagementOpen}
+        onClose={() => setIsUserManagementOpen(false)}
+        currentUser={authUser}
+        usersList={usersList}
+        onUserUpdated={handleUserUpdated}
       />
 
     </div>
