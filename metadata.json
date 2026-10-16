@@ -1,0 +1,6 @@
+{
+  "name": "Sistem Pengecekan Stok Barang (Stock Opname)",
+  "description": "Sistem manajemen pengecekan stok barang terpadu: impor Excel .xlsx, sortir otomatis A-Z, deteksi stok kritis (<= N), alur verifikasi checker dan validasi admin, serta cetak laporan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
