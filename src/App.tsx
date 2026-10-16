@@ -29,6 +29,9 @@ import {
 import { 
   UserManagementModal 
 } from './components/UserManagementModal';
+import { 
+  LandingPage 
+} from './components/LandingPage';
 
 import { 
   StockItem, 
@@ -75,7 +78,8 @@ import {
   Cloud,
   RefreshCw,
   Users,
-  UserCog
+  UserCog,
+  User
 } from 'lucide-react';
 
 export default function App() {
@@ -187,6 +191,12 @@ export default function App() {
 
   const handleOpenLoginModal = () => {
     setIsLoginModalOpen(true);
+  };
+
+  const handleLogout = () => {
+    setAuthUser(null);
+    saveStoredAuthUser(null);
+    showToast('Berhasil keluar dari sistem.', 'info');
   };
 
   // Handle user updated from UserManagementModal
@@ -475,6 +485,36 @@ export default function App() {
   const flaggedCount = session.items.filter((i) => i.adminFlagged).length;
   const checkedCount = session.items.filter((i) => i.isChecked).length;
 
+  // DIRECT LANDING PAGE GATEWAY: If not logged in, show Landing Page with Login first!
+  if (!authUser) {
+    return (
+      <>
+        {toastMessage && (
+          <div className="fixed top-5 right-4 z-50 max-w-md animate-in slide-in-from-top-4 duration-200">
+            <div
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold ${
+                toastMessage.type === 'success'
+                  ? 'bg-emerald-900 text-emerald-100 border-emerald-700'
+                  : toastMessage.type === 'warning'
+                  ? 'bg-amber-900 text-amber-100 border-amber-700'
+                  : 'bg-slate-900 text-white border-slate-700'
+              }`}
+            >
+              {toastMessage.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
+              {toastMessage.type === 'warning' && <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />}
+              {toastMessage.type === 'info' && <Bell className="w-4 h-4 text-indigo-400 shrink-0" />}
+              <span>{toastMessage.text}</span>
+            </div>
+          </div>
+        )}
+        <LandingPage
+          onLoginSuccess={handleLoginSuccess}
+          isDbConnected={isDbConnected}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       
@@ -528,6 +568,7 @@ export default function App() {
         reportCount={reports.length}
         onOpenUserManagement={() => setIsUserManagementOpen(true)}
         userName={authUser?.name}
+        onLogout={handleLogout}
       />
 
       {/* Main Container */}
@@ -555,8 +596,8 @@ export default function App() {
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
                 {role === 'ADMIN'
-                  ? 'Admin berhak mengubah ambang batas kritis (N), menginput data stok (.xlsx), meninjau kelengkapan, menandai barang terlewat, dan memvalidasi laporan akhir.'
-                  : 'Petugas Cek bertugas memeriksa fisik barang dan mencentang checkbox hingga tuntas. Mode admin dikunci untuk mencegah manipulasi data.'}
+                  ? 'Admin Abdus Shomad berhak mengubah ambang batas kritis (N), menginput data stok (.xlsx), meninjau kelengkapan, menandai barang terlewat, dan memvalidasi laporan akhir.'
+                  : 'Petugas Cek Saiful Anwar bertugas memeriksa fisik barang dan mencentang checkbox hingga tuntas. Mode admin dikunci untuk mencegah manipulasi data.'}
               </p>
             </div>
           </div>
@@ -566,10 +607,10 @@ export default function App() {
               <button
                 onClick={() => setIsUserManagementOpen(true)}
                 className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-400/50 shadow-xs transition-colors"
-                title="Buka pengaturan user untuk mengubah nama Budi Santoso atau akun lainnya"
+                title="Buka pengaturan user untuk mengubah nama Abdus Shomad atau akun lainnya"
               >
                 <UserCog className="w-3.5 h-3.5 text-indigo-200" />
-                <span>Pengaturan User (Ubah Budi Santoso)</span>
+                <span>Pengaturan User</span>
               </button>
             )}
 
@@ -587,10 +628,19 @@ export default function App() {
                 onClick={handleOpenLoginModal}
                 className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
               >
-                <LogOut className="w-3.5 h-3.5 text-slate-300" />
+                <User className="w-3.5 h-3.5 text-slate-300" />
                 <span>Ganti Akun</span>
               </button>
             )}
+
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-rose-600/30 hover:bg-rose-600/50 text-rose-200 border border-rose-500/40 transition-colors"
+              title="Keluar ke Halaman Utama (Landing Page)"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Keluar</span>
+            </button>
           </div>
         </div>
 

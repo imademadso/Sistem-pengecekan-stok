@@ -10,14 +10,14 @@ export const PREDEFINED_ACCOUNTS = [
   {
     username: 'admin',
     password: '123',
-    name: 'Budi Santoso',
+    name: 'Abdus Shomad',
     role: 'ADMIN' as UserRole,
     title: 'Admin Gudang & Stok',
   },
   {
     username: 'petugas',
     password: '123',
-    name: 'Ahmad Fauzi',
+    name: 'Saiful Anwar',
     role: 'USER_CHECKER' as UserRole,
     title: 'Petugas Cek / Checker Lapangan',
   },
@@ -27,17 +27,22 @@ export function getStoredAuthUser(): AuthUser | null {
   try {
     const val = localStorage.getItem(STORAGE_AUTH_USER_KEY);
     if (val) {
-      return JSON.parse(val);
+      const parsed: AuthUser = JSON.parse(val);
+      // Auto-migrate old names if present in localStorage
+      if (parsed.username === 'admin' && (parsed.name === 'Budi Santoso' || !parsed.name)) {
+        parsed.name = 'Abdus Shomad';
+        saveStoredAuthUser(parsed);
+      } else if (parsed.username === 'petugas' && (parsed.name === 'Ahmad Fauzi' || !parsed.name)) {
+        parsed.name = 'Saiful Anwar';
+        saveStoredAuthUser(parsed);
+      }
+      return parsed;
     }
   } catch {
     return null;
   }
-  // Default to ADMIN for instant ease of use or null for login screen
-  return {
-    username: 'admin',
-    name: 'Budi Santoso',
-    role: 'ADMIN',
-  };
+  // Default to null so landing page with login form is shown first
+  return null;
 }
 
 export function saveStoredAuthUser(user: AuthUser | null) {
@@ -57,7 +62,7 @@ export function createDefaultSession(): AuditSession {
     ...item,
     isChecked: idx < 6, // simulate some checked items for immediate visual fidelity
     checkedAt: idx < 6 ? new Date(Date.now() - (idx + 1) * 300000).toISOString() : null,
-    checkedBy: idx < 6 ? 'Ahmad (Petugas Toko)' : null,
+    checkedBy: idx < 6 ? 'Saiful Anwar (Petugas Cek)' : null,
     adminFlagged: false,
     adminNote: '',
     userNote: '',
@@ -72,8 +77,8 @@ export function createDefaultSession(): AuditSession {
     thresholdN: 36, // Ambang batas N yang diminta user (contoh N=36)
     items: sortedItems,
     status: 'SEDANG_DICEK',
-    namaAdmin: 'Budi Santoso (Admin Gudang)',
-    namaChecker: 'Ahmad Fauzi (Petugas Cek)',
+    namaAdmin: 'Abdus Shomad (Admin Gudang)',
+    namaChecker: 'Saiful Anwar (Petugas Cek)',
     catatanValidasi: '',
   };
 }

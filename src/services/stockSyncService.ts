@@ -40,6 +40,14 @@ export async function seedInitialUsers(): Promise<void> {
           title: acc.title,
           createdAt: new Date().toISOString(),
         });
+      } else {
+        const data = snap.data();
+        // Migrate old names Budi Santoso -> Abdus Shomad and Ahmad Fauzi -> Saiful Anwar
+        if (acc.username === 'admin' && (data.name === 'Budi Santoso' || !data.name)) {
+          await setDoc(userRef, { ...data, name: 'Abdus Shomad' }, { merge: true });
+        } else if (acc.username === 'petugas' && (data.name === 'Ahmad Fauzi' || !data.name)) {
+          await setDoc(userRef, { ...data, name: 'Saiful Anwar' }, { merge: true });
+        }
       }
     }
   } catch (error) {
@@ -169,7 +177,25 @@ export async function seedDefaultSessionIfEmpty(): Promise<AuditSession> {
       });
       return defaultSess;
     }
-    return snap.data() as AuditSession;
+    const data = snap.data() as AuditSession;
+    // Auto-migrate session admin/checker names
+    let needsUpdate = false;
+    let newAdmin = data.namaAdmin;
+    let newChecker = data.namaChecker;
+    if (data.namaAdmin && data.namaAdmin.includes('Budi Santoso')) {
+      newAdmin = 'Abdus Shomad (Admin Gudang)';
+      needsUpdate = true;
+    }
+    if (data.namaChecker && data.namaChecker.includes('Ahmad Fauzi')) {
+      newChecker = 'Saiful Anwar (Petugas Cek)';
+      needsUpdate = true;
+    }
+    if (needsUpdate) {
+      const updated = { ...data, namaAdmin: newAdmin, namaChecker: newChecker };
+      await setDoc(sessionRef, updated, { merge: true });
+      return updated;
+    }
+    return data;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `sessions/${ACTIVE_SESSION_DOC}`);
     return createDefaultSession();

@@ -36,13 +36,13 @@ export function UserManagementModal({
   // Safe user list fallback
   const effectiveUsers = usersList.length > 0 ? usersList : PREDEFINED_ACCOUNTS;
 
-  // Find the admin account (Budi Santoso)
+  // Find the admin account (Abdus Shomad)
   const adminAccount = effectiveUsers.find((u) => u.username === 'admin') || 
                        effectiveUsers.find((u) => u.role === 'ADMIN') || 
                        PREDEFINED_ACCOUNTS[0];
 
-  // Quick rename state specifically for Budi Santoso / Admin
-  const [budiNewName, setBudiNewName] = useState(adminAccount?.name || 'Budi Santoso');
+  // Quick rename state specifically for Abdus Shomad / Admin
+  const [budiNewName, setBudiNewName] = useState(adminAccount?.name || 'Abdus Shomad');
   const [isSavingBudi, setIsSavingBudi] = useState(false);
 
   // General user editing state
@@ -271,7 +271,7 @@ export function UserManagementModal({
                     </span>
                   </h4>
                   <p className="text-[11px] text-slate-500">
-                    Ketik nama baru untuk menggantikan nama default <em>"Budi Santoso"</em>
+                    Ketik nama baru untuk memperbarui akun Admin (contoh: Abdus Shomad)
                   </p>
                 </div>
               </div>
@@ -285,7 +285,7 @@ export function UserManagementModal({
                     required
                     value={budiNewName}
                     onChange={(e) => setBudiNewName(e.target.value)}
-                    placeholder="Masukkan nama baru (contoh: Matsunaga / Budi Santoso)"
+                    placeholder="Masukkan nama baru (contoh: Abdus Shomad / Matsunaga)"
                     className="w-full text-xs px-3.5 py-2.5 bg-white border border-indigo-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none font-semibold text-slate-900 shadow-2xs"
                   />
                 </div>
@@ -305,7 +305,7 @@ export function UserManagementModal({
                   <Sparkles className="w-3 h-3 text-amber-500" />
                   Pilihan cepat:
                 </span>
-                {['Matsunaga', 'Budi Santoso', 'Admin Gudang Pusat', 'Mads'].map((preset) => (
+                {['Abdus Shomad', 'Matsunaga', 'Admin Gudang Pusat', 'Mads'].map((preset) => (
                   <button
                     key={preset}
                     type="button"

@@ -262,16 +262,18 @@ export function LoginModal({
               <button
                 type="button"
                 onClick={() => handleQuickLogin('ADMIN')}
-                className="py-1.5 px-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-800 rounded-lg text-[11px] font-semibold text-center transition-colors"
+                className="py-2 px-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-900 rounded-lg text-[11px] font-semibold text-center transition-colors flex flex-col items-center gap-0.5"
               >
-                Masuk Demo Admin
+                <span className="font-bold text-indigo-950">Admin Gudang</span>
+                <span className="text-[10px] text-indigo-700">Abdus Shomad</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickLogin('USER_CHECKER')}
-                className="py-1.5 px-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 rounded-lg text-[11px] font-semibold text-center transition-colors"
+                className="py-2 px-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 rounded-lg text-[11px] font-semibold text-center transition-colors flex flex-col items-center gap-0.5"
               >
-                Masuk Demo Petugas Cek
+                <span className="font-bold text-blue-950">Petugas Cek</span>
+                <span className="text-[10px] text-blue-700">Saiful Anwar</span>
               </button>
             </div>
             <p className="text-[10px] text-slate-400 mt-2 text-center">
