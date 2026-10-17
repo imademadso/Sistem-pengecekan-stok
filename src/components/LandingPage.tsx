@@ -20,7 +20,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { AuthUser, UserRole } from '../types/stock';
-import { PREDEFINED_ACCOUNTS } from '../utils/storage';
+import { PREDEFINED_ACCOUNTS, getStoredUsers } from '../utils/storage';
 import { authenticateFromFirestore } from '../services/stockSyncService';
 
 interface LandingPageProps {
@@ -35,15 +35,19 @@ export function LandingPage({ onLoginSuccess, isDbConnected }: LandingPageProps)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const storedUsers = getStoredUsers();
+  const currentAdmin = storedUsers.find((u) => u.username.toLowerCase() === 'admin') || PREDEFINED_ACCOUNTS[0];
+  const currentChecker = storedUsers.find((u) => u.username.toLowerCase() === 'petugas') || PREDEFINED_ACCOUNTS[1];
+
   const handleSelectRole = (role: UserRole) => {
     setSelectedRole(role);
     setErrorMsg(null);
     if (role === 'ADMIN') {
-      setUsername('admin');
-      setPassword('123');
+      setUsername(currentAdmin.username);
+      setPassword(currentAdmin.password || '123');
     } else {
-      setUsername('petugas');
-      setPassword('123');
+      setUsername(currentChecker.username);
+      setPassword(currentChecker.password || '123');
     }
   };
 
@@ -61,8 +65,9 @@ export function LandingPage({ onLoginSuccess, isDbConnected }: LandingPageProps)
         return;
       }
 
-      // 2. Predefined accounts fallback
-      const found = PREDEFINED_ACCOUNTS.find(
+      // 2. Dynamic stored accounts verification
+      const allAccounts = getStoredUsers();
+      const found = allAccounts.find(
         (acc) =>
           acc.username.toLowerCase() === username.trim().toLowerCase() &&
           acc.password === password.trim()
@@ -78,10 +83,10 @@ export function LandingPage({ onLoginSuccess, isDbConnected }: LandingPageProps)
         return;
       }
 
-      setErrorMsg('Username atau password salah! Periksa kembali atau gunakan tombol Masuk Cepat 1-Klik.');
-    } catch (err: any) {
-      console.warn('Login fallback triggered', err);
-      const found = PREDEFINED_ACCOUNTS.find(
+      setErrorMsg('Username atau password tidak cocok. Silakan periksa kembali.');
+    } catch {
+      const allAccounts = getStoredUsers();
+      const found = allAccounts.find(
         (acc) =>
           acc.username.toLowerCase() === username.trim().toLowerCase() &&
           acc.password === password.trim()
@@ -101,7 +106,8 @@ export function LandingPage({ onLoginSuccess, isDbConnected }: LandingPageProps)
   };
 
   const handleQuickLogin = (role: UserRole) => {
-    const acc = PREDEFINED_ACCOUNTS.find((a) => a.role === role);
+    const allAccounts = getStoredUsers();
+    const acc = allAccounts.find((a) => a.role === role) || PREDEFINED_ACCOUNTS.find((a) => a.role === role);
     if (acc) {
       onLoginSuccess({
         username: acc.username,
@@ -303,7 +309,7 @@ export function LandingPage({ onLoginSuccess, isDbConnected }: LandingPageProps)
                   </label>
                   <div className="grid grid-cols-2 gap-2.5">
                     
-                    {/* Admin Tab (Abdus Shomad) */}
+                    {/* Admin Tab */}
                     <button
                       type="button"
                       onClick={() => handleSelectRole('ADMIN')}
@@ -323,12 +329,12 @@ export function LandingPage({ onLoginSuccess, isDbConnected }: LandingPageProps)
                       </div>
                       <div>
                         <div className="font-bold text-xs text-white">Admin Gudang</div>
-                        <div className="text-[11px] font-semibold text-indigo-300">Abdus Shomad</div>
+                        <div className="text-[11px] font-semibold text-indigo-300 truncate">{currentAdmin.name}</div>
                         <div className="text-[9px] text-slate-400 mt-0.5">Akses Penuh & Validasi</div>
                       </div>
                     </button>
 
-                    {/* Petugas Cek Tab (Saiful Anwar) */}
+                    {/* Petugas Cek Tab */}
                     <button
                       type="button"
                       onClick={() => handleSelectRole('USER_CHECKER')}
@@ -348,7 +354,7 @@ export function LandingPage({ onLoginSuccess, isDbConnected }: LandingPageProps)
                       </div>
                       <div>
                         <div className="font-bold text-xs text-white">Petugas Cek</div>
-                        <div className="text-[11px] font-semibold text-blue-300">Saiful Anwar</div>
+                        <div className="text-[11px] font-semibold text-blue-300 truncate">{currentChecker.name}</div>
                         <div className="text-[9px] text-slate-400 mt-0.5">Terkunci dari Mode Admin</div>
                       </div>
                     </button>
@@ -413,20 +419,20 @@ export function LandingPage({ onLoginSuccess, isDbConnected }: LandingPageProps)
                       {isSubmitting 
                         ? 'Memverifikasi...' 
                         : selectedRole === 'ADMIN' 
-                        ? 'Masuk sebagai Abdus Shomad (Admin)' 
-                        : 'Masuk sebagai Saiful Anwar (Petugas Cek)'}
+                        ? `Masuk sebagai ${currentAdmin.name} (Admin)` 
+                        : `Masuk sebagai ${currentChecker.name} (Petugas Cek)`}
                     </span>
                   </button>
                 </form>
 
-                {/* Quick 1-Click Demo Logins */}
+                {/* Quick 1-Click Access for Verified Accounts */}
                 <div className="pt-3 border-t border-slate-800 space-y-2">
                   <div className="flex items-center justify-between text-[11px] text-slate-400">
                     <span className="flex items-center gap-1 font-semibold text-slate-300">
                       <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                      Masuk Cepat Demo (1-Klik):
+                      Akses Cepat Akun Terdaftar (1-Klik):
                     </span>
-                    <span className="text-[10px] text-slate-500">Password default: 123</span>
+                    <span className="text-[10px] text-slate-500">Akun Resmi</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
@@ -435,11 +441,11 @@ export function LandingPage({ onLoginSuccess, isDbConnected }: LandingPageProps)
                       onClick={() => handleQuickLogin('ADMIN')}
                       className="py-2 px-3 rounded-xl bg-indigo-950/70 hover:bg-indigo-900/80 border border-indigo-700/60 text-indigo-200 text-left transition-colors flex items-center justify-between"
                     >
-                      <div>
-                        <div className="text-[11px] font-bold text-white">Abdus Shomad</div>
+                      <div className="min-w-0 pr-1">
+                        <div className="text-[11px] font-bold text-white truncate">{currentAdmin.name}</div>
                         <div className="text-[9px] text-indigo-400">Admin Gudang</div>
                       </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-indigo-400" />
+                      <ArrowRight className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                     </button>
 
                     <button
@@ -447,11 +453,11 @@ export function LandingPage({ onLoginSuccess, isDbConnected }: LandingPageProps)
                       onClick={() => handleQuickLogin('USER_CHECKER')}
                       className="py-2 px-3 rounded-xl bg-blue-950/70 hover:bg-blue-900/80 border border-blue-700/60 text-blue-200 text-left transition-colors flex items-center justify-between"
                     >
-                      <div>
-                        <div className="text-[11px] font-bold text-white">Saiful Anwar</div>
+                      <div className="min-w-0 pr-1">
+                        <div className="text-[11px] font-bold text-white truncate">{currentChecker.name}</div>
                         <div className="text-[9px] text-blue-400">Petugas Cek</div>
                       </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-blue-400" />
+                      <ArrowRight className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                     </button>
                   </div>
 

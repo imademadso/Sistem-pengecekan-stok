@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Search, 
   CheckSquare, 
@@ -6,10 +6,12 @@ import {
   AlertTriangle, 
   AlertCircle,
   Flag,
-  CheckCircle2,
-  Clock,
-  ArrowUpDown,
-  Filter
+  CheckCircle2, 
+  Clock, 
+  ArrowUpDown, 
+  Filter,
+  LayoutGrid,
+  Table as TableIcon
 } from 'lucide-react';
 import { StockItem, UserRole } from '../types/stock';
 
@@ -38,6 +40,7 @@ export function StockTable({
   const [filterMode, setFilterMode] = useState<'ALL' | 'UNCHECKED' | 'CHECKED' | 'CRITICAL' | 'FLAGGED'>('ALL');
   const [isEditingN, setIsEditingN] = useState(false);
   const [tempN, setTempN] = useState(String(thresholdN));
+  const [viewMode, setViewMode] = useState<'auto' | 'card' | 'table'>('auto');
 
   const handleSaveThreshold = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,37 +98,41 @@ export function StockTable({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
       
       {/* Search & Filter Toolbar */}
-      <div className="p-4 border-b border-slate-200 bg-slate-50/70 space-y-3">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="p-3 sm:p-4 border-b border-slate-200 bg-slate-50/70 space-y-3">
+        
+        {/* Row 1: Search & Ambang Batas N */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 sm:gap-3">
           
           {/* Search bar */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari Kode Item atau Nama Item..."
-              className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              className="w-full pl-9 pr-8 py-2.5 sm:py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-2xs"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-slate-400 hover:text-slate-600 p-1"
               >
                 &times;
               </button>
             )}
           </div>
 
-          {/* Ambang Batas Kritis (N) Control for Admin */}
-          <div className="flex items-center gap-2">
+          {/* Ambang Batas Kritis & View Mode Switcher */}
+          <div className="flex items-center flex-wrap gap-2 justify-between sm:justify-start">
+            
+            {/* Ambang Batas Kritis (N) Control */}
             {currentRole === 'ADMIN' ? (
               isEditingN ? (
-                <form onSubmit={handleSaveThreshold} className="flex items-center gap-1.5 bg-white border border-rose-300 rounded-lg px-2.5 py-1 shadow-xs">
+                <form onSubmit={handleSaveThreshold} className="flex items-center gap-1.5 bg-white border border-rose-300 rounded-xl px-2.5 py-1.5 shadow-2xs">
                   <span className="text-[11px] font-bold text-rose-700">Ubah N:</span>
                   <input
                     type="number"
@@ -133,12 +140,12 @@ export function StockTable({
                     max="9999"
                     value={tempN}
                     onChange={(e) => setTempN(e.target.value)}
-                    className="w-16 px-1.5 py-0.5 text-xs font-bold text-rose-600 border border-slate-300 rounded focus:ring-1 focus:ring-rose-500 focus:outline-none text-center"
+                    className="w-14 px-1.5 py-0.5 text-xs font-bold text-rose-600 border border-slate-300 rounded-lg focus:ring-1 focus:ring-rose-500 focus:outline-none text-center"
                     autoFocus
                   />
                   <button
                     type="submit"
-                    className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-[11px] font-bold"
+                    className="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-[11px] font-bold"
                   >
                     Simpan
                   </button>
@@ -148,15 +155,15 @@ export function StockTable({
                       setTempN(String(thresholdN));
                       setIsEditingN(false);
                     }}
-                    className="px-1.5 py-0.5 text-slate-500 hover:text-slate-700 text-[11px]"
+                    className="px-1.5 py-1 text-slate-500 hover:text-slate-700 text-[11px]"
                   >
                     Batal
                   </button>
                 </form>
               ) : (
-                <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-xs">
+                <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-2xs">
                   <span className="text-[11px] font-semibold text-slate-500">Batas Kritis:</span>
-                  <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 font-bold text-xs border border-rose-200">
+                  <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 font-bold text-xs border border-rose-200">
                     N = {thresholdN} unit
                   </span>
                   <button
@@ -165,7 +172,7 @@ export function StockTable({
                       setTempN(String(thresholdN));
                       setIsEditingN(true);
                     }}
-                    className="ml-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold underline"
+                    className="ml-1 text-[11px] text-indigo-600 hover:text-indigo-800 font-bold underline"
                     title="Ubah ambang batas kritis stok toko"
                   >
                     Ubah N
@@ -173,62 +180,88 @@ export function StockTable({
                 </div>
               )
             ) : (
-              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-xs">
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-3 py-1.5 shadow-2xs">
                 <span className="text-[11px] font-semibold text-slate-500">Batas Kritis:</span>
-                <span className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 font-bold text-xs border border-rose-200">
+                <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 font-bold text-xs border border-rose-200">
                   N &le; {thresholdN} unit
                 </span>
               </div>
             )}
 
-            {/* Quick Bulk Actions for User */}
+            {/* View Mode Toggle (Card HP vs Table) */}
+            <div className="inline-flex rounded-xl bg-white border border-slate-200 p-0.5 shadow-2xs text-slate-600">
+              <button
+                type="button"
+                onClick={() => setViewMode(viewMode === 'card' ? 'table' : 'card')}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  viewMode === 'card' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'hover:bg-slate-50'
+                }`}
+                title="Alihkan Tampilan Kartu HP / Tabel Lengkap"
+              >
+                {viewMode === 'card' ? (
+                  <>
+                    <TableIcon className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Tabel</span>
+                  </>
+                ) : (
+                  <>
+                    <LayoutGrid className="w-3.5 h-3.5 text-indigo-600" />
+                    <span className="hidden sm:inline">Kartu HP</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Quick Bulk Actions */}
             {!isAuditFinalized && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => handleCheckVisibleAll(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold rounded-lg shadow-xs transition-colors"
-                  title="Tandai semua barang yang terlihat saat ini sebagai SUDAH DICEK"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold rounded-xl shadow-2xs transition-colors"
+                  title="Tandai semua barang terlihat sebagai SUDAH DICEK"
                 >
                   <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Centang Semua ({filteredItems.length})</span>
+                  <span className="hidden sm:inline">Centang Semua</span>
+                  <span className="sm:hidden">Ceklis ({filteredItems.length})</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleCheckVisibleAll(false)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-semibold rounded-lg shadow-xs transition-colors"
-                  title="Hapus centang semua barang yang terlihat"
+                  className="p-1.5 sm:px-2.5 sm:py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-600 text-xs font-semibold rounded-xl shadow-2xs transition-colors"
+                  title="Hapus centang semua barang terlihat"
                 >
                   <Square className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Reset Centang</span>
+                  <span className="hidden sm:inline ml-1">Reset</span>
                 </button>
               </div>
             )}
+
           </div>
 
         </div>
 
-        {/* Filter Chips */}
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1 mr-1">
+        {/* Row 2: Filter Chips with Horizontal Scroll Support for Mobile */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-0.5 text-xs no-scrollbar">
+          <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1 shrink-0 mr-1">
             <Filter className="w-3 h-3" /> Filter:
           </span>
 
           <button
             onClick={() => setFilterMode('ALL')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 ${
               filterMode === 'ALL'
                 ? 'bg-slate-900 text-white shadow-xs'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            Semua Barang ({stats.total})
+            Semua ({stats.total})
           </button>
 
           <button
             onClick={() => setFilterMode('UNCHECKED')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1 ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1 shrink-0 ${
               filterMode === 'UNCHECKED'
                 ? 'bg-amber-600 text-white shadow-xs'
                 : 'bg-white text-amber-700 hover:bg-amber-50 border border-amber-200'
@@ -240,7 +273,7 @@ export function StockTable({
 
           <button
             onClick={() => setFilterMode('CHECKED')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1 ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1 shrink-0 ${
               filterMode === 'CHECKED'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'bg-white text-emerald-700 hover:bg-emerald-50 border border-emerald-200'
@@ -252,35 +285,224 @@ export function StockTable({
 
           <button
             onClick={() => setFilterMode('CRITICAL')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1 ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1 shrink-0 ${
               filterMode === 'CRITICAL'
                 ? 'bg-rose-600 text-white shadow-xs'
                 : 'bg-white text-rose-700 hover:bg-rose-50 border border-rose-200'
             }`}
-            title={`Barang dengan stok Sempu, Pilar, atau Serang yang <= ${thresholdN}`}
+            title={`Barang dengan stok Sempu, Pilar, atau Serang <= ${thresholdN}`}
           >
             <AlertTriangle className="w-3 h-3" />
-            <span>Stok Kritis Sempu/Pilar/Serang &le; {thresholdN} ({stats.critical})</span>
+            <span>Kritis &le; {thresholdN} ({stats.critical})</span>
           </button>
 
           {stats.flagged > 0 && (
             <button
               onClick={() => setFilterMode('FLAGGED')}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1 ${
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1 shrink-0 ${
                 filterMode === 'FLAGGED'
                   ? 'bg-amber-500 text-white shadow-xs'
                   : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-300 animate-pulse'
               }`}
             >
               <Flag className="w-3 h-3 text-amber-600" />
-              <span>Ditandai Admin / Terlewat ({stats.flagged})</span>
+              <span>Terlewat ({stats.flagged})</span>
             </button>
           )}
         </div>
+
       </div>
 
-      {/* Main 6-Column Table: Kode Item, Nama Item, Pusat, Sempu, Pilar, Serang */}
-      <div className="overflow-x-auto">
+      {/* MOBILE-FIRST VIEW: Responsive Cards (Visible on Mobile screens or when viewMode === 'card') */}
+      <div className={`${viewMode === 'table' ? 'hidden' : viewMode === 'card' ? 'block' : 'block md:hidden'} p-3 space-y-3`}>
+        {filteredItems.length === 0 ? (
+          <div className="py-12 text-center text-slate-400">
+            <AlertCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <p className="font-semibold text-sm">Tidak ada barang yang cocok dengan filter.</p>
+            <p className="text-xs">Coba ubah kata kunci pencarian atau ganti filter chip.</p>
+          </div>
+        ) : (
+          filteredItems.map((item, index) => {
+            const isT1Crit = item.stokToko1 <= thresholdN;
+            const isT2Crit = item.stokToko2 <= thresholdN;
+            const isT3Crit = item.stokToko3 <= thresholdN;
+
+            return (
+              <div
+                key={item.id}
+                className={`p-3.5 rounded-2xl border transition-all ${
+                  item.adminFlagged
+                    ? 'bg-amber-50/80 border-amber-400 ring-2 ring-amber-300/40'
+                    : item.isChecked
+                    ? 'bg-emerald-50/40 border-emerald-200'
+                    : (isT1Crit || isT2Crit || isT3Crit)
+                    ? 'bg-rose-50/30 border-rose-200'
+                    : 'bg-white border-slate-200 shadow-2xs'
+                }`}
+              >
+                {/* Top Row: Checkbox + Kode Item + Index */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-[11px] font-mono text-slate-400 font-bold">
+                      #{index + 1}
+                    </span>
+                    <span className="font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200">
+                      {item.kodeItem}
+                    </span>
+                    {item.adminFlagged && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-white flex items-center gap-1">
+                        <Flag className="w-3 h-3 fill-white" />
+                        Terlewat
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Prominent Checkbox Button for Mobile Screen Touch (Min 44x44px target) */}
+                  <button
+                    type="button"
+                    disabled={isAuditFinalized}
+                    onClick={() => onToggleCheck(item.id)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all select-none active:scale-95 disabled:opacity-50 shrink-0 ${
+                      item.isChecked
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'
+                    }`}
+                  >
+                    {item.isChecked ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Sudah Dicek</span>
+                      </>
+                    ) : (
+                      <>
+                        <Square className="w-4 h-4 text-slate-400" />
+                        <span>Ceklis</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Nama Item (A-Z) */}
+                <div className="mt-2">
+                  <h4 className="font-bold text-xs sm:text-sm text-slate-900 leading-snug">
+                    {item.namaItem}
+                  </h4>
+                </div>
+
+                {/* 4-Cell Stock Matrix: Pusat, Sempu, Pilar, Serang */}
+                <div className="grid grid-cols-4 gap-1.5 mt-3 pt-2 border-t border-slate-100 text-center">
+                  
+                  {/* Pusat */}
+                  <div className="p-1.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pusat</div>
+                    <div className="font-mono font-bold text-xs sm:text-sm text-slate-800 mt-0.5">
+                      {item.stokPusat.toLocaleString('id-ID')}
+                    </div>
+                  </div>
+
+                  {/* Sempu */}
+                  <div className={`p-1.5 rounded-xl border ${
+                    isT1Crit 
+                      ? 'bg-rose-100/90 border-rose-300 text-rose-900' 
+                      : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-center gap-0.5">
+                      <span>Sempu</span>
+                      {isT1Crit && <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />}
+                    </div>
+                    <div className={`font-mono font-bold text-xs sm:text-sm mt-0.5 ${isT1Crit ? 'text-rose-700' : 'text-slate-800'}`}>
+                      {item.stokToko1}
+                    </div>
+                    {isT1Crit && (
+                      <div className="text-[9px] font-bold text-rose-600">&le;{thresholdN}</div>
+                    )}
+                  </div>
+
+                  {/* Pilar */}
+                  <div className={`p-1.5 rounded-xl border ${
+                    isT2Crit 
+                      ? 'bg-rose-100/90 border-rose-300 text-rose-900' 
+                      : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-center gap-0.5">
+                      <span>Pilar</span>
+                      {isT2Crit && <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />}
+                    </div>
+                    <div className={`font-mono font-bold text-xs sm:text-sm mt-0.5 ${isT2Crit ? 'text-rose-700' : 'text-slate-800'}`}>
+                      {item.stokToko2}
+                    </div>
+                    {isT2Crit && (
+                      <div className="text-[9px] font-bold text-rose-600">&le;{thresholdN}</div>
+                    )}
+                  </div>
+
+                  {/* Serang */}
+                  <div className={`p-1.5 rounded-xl border ${
+                    isT3Crit 
+                      ? 'bg-rose-100/90 border-rose-300 text-rose-900' 
+                      : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center justify-center gap-0.5">
+                      <span>Serang</span>
+                      {isT3Crit && <AlertTriangle className="w-2.5 h-2.5 text-rose-600 shrink-0" />}
+                    </div>
+                    <div className={`font-mono font-bold text-xs sm:text-sm mt-0.5 ${isT3Crit ? 'text-rose-700' : 'text-slate-800'}`}>
+                      {item.stokToko3}
+                    </div>
+                    {isT3Crit && (
+                      <div className="text-[9px] font-bold text-rose-600">&le;{thresholdN}</div>
+                    )}
+                  </div>
+
+                </div>
+
+                {/* Flag note if admin marked */}
+                {item.adminFlagged && (
+                  <div className="mt-2.5 p-2 rounded-xl bg-amber-100 border border-amber-300 text-[11px] text-amber-900 flex items-start gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <strong>Instruksi Admin:</strong> {item.adminNote || 'Barang terlewat, mohon hitung fisik ulang'}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bottom Card Footer: Checker info & Admin action */}
+                <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                  <div>
+                    {item.isChecked && item.checkedAt ? (
+                      <div className="flex items-center gap-1 text-emerald-700 font-semibold">
+                        <Clock className="w-3 h-3" />
+                        <span>Dicek {new Date(item.checkedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">Belum diverifikasi fisik</span>
+                    )}
+                  </div>
+
+                  {currentRole === 'ADMIN' && (
+                    <button
+                      type="button"
+                      onClick={() => onOpenFlagModal(item)}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                        item.adminFlagged
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200'
+                      }`}
+                    >
+                      <Flag className={`w-3 h-3 ${item.adminFlagged ? 'fill-white' : 'text-amber-600'}`} />
+                      <span>{item.adminFlagged ? 'Revisi Aktif' : 'Tandai'}</span>
+                    </button>
+                  )}
+                </div>
+
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* DESKTOP TABLE VIEW: Full 6-Column Layout (Visible on Desktop or when viewMode === 'table') */}
+      <div className={`${viewMode === 'card' ? 'hidden' : viewMode === 'table' ? 'block' : 'hidden md:block'} overflow-x-auto`}>
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200 select-none">
@@ -296,28 +518,28 @@ export function StockTable({
                   </span>
                 </div>
               </th>
-              <th className="py-3 px-3 text-right min-w-[110px] uppercase tracking-wider text-[11px] text-slate-700">
+              <th className="py-3 px-3 text-right min-w-[100px] uppercase tracking-wider text-[11px] text-slate-700">
                 Pusat
               </th>
-              <th className="py-3 px-3 text-right min-w-[125px] uppercase tracking-wider text-[11px] bg-slate-50/50">
+              <th className="py-3 px-3 text-right min-w-[115px] uppercase tracking-wider text-[11px] bg-slate-50/50">
                 <div className="flex flex-col items-end">
                   <span>Sempu</span>
                   <span className="text-[9px] font-normal text-slate-400">Tanda &le; {thresholdN}</span>
                 </div>
               </th>
-              <th className="py-3 px-3 text-right min-w-[125px] uppercase tracking-wider text-[11px] bg-slate-50/50">
+              <th className="py-3 px-3 text-right min-w-[115px] uppercase tracking-wider text-[11px] bg-slate-50/50">
                 <div className="flex flex-col items-end">
                   <span>Pilar</span>
                   <span className="text-[9px] font-normal text-slate-400">Tanda &le; {thresholdN}</span>
                 </div>
               </th>
-              <th className="py-3 px-3 text-right min-w-[125px] uppercase tracking-wider text-[11px] bg-slate-50/50">
+              <th className="py-3 px-3 text-right min-w-[115px] uppercase tracking-wider text-[11px] bg-slate-50/50">
                 <div className="flex flex-col items-end">
                   <span>Serang</span>
                   <span className="text-[9px] font-normal text-slate-400">Tanda &le; {thresholdN}</span>
                 </div>
               </th>
-              {/* Checkbox column on the right side as requested */}
+              {/* Checkbox column */}
               <th className="py-3 px-4 text-center min-w-[150px] uppercase tracking-wider text-[11px] bg-indigo-50/60 text-indigo-900 border-l border-indigo-100">
                 <div className="flex flex-col items-center">
                   <span>Pengecekan (Checkbox)</span>
@@ -368,7 +590,7 @@ export function StockTable({
 
                     {/* 1. KODE ITEM */}
                     <td className="py-3 px-3 font-mono font-bold text-slate-700 whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-xs">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-xs">
                         {item.kodeItem}
                       </span>
                     </td>
@@ -395,7 +617,7 @@ export function StockTable({
                       {item.stokPusat.toLocaleString('id-ID')}
                     </td>
 
-                    {/* 4. STOK TOKO 1 (Format Penandaan <= N) */}
+                    {/* 4. STOK SEMPU (Format Penandaan <= N) */}
                     <td className="py-3 px-3 text-right">
                       {isT1Crit ? (
                         <div className="inline-flex flex-col items-end">
@@ -414,7 +636,7 @@ export function StockTable({
                       )}
                     </td>
 
-                    {/* 5. STOK TOKO 2 (Format Penandaan <= N) */}
+                    {/* 5. STOK PILAR (Format Penandaan <= N) */}
                     <td className="py-3 px-3 text-right">
                       {isT2Crit ? (
                         <div className="inline-flex flex-col items-end">
@@ -433,7 +655,7 @@ export function StockTable({
                       )}
                     </td>
 
-                    {/* 6. STOK TOKO 3 (Format Penandaan <= N) */}
+                    {/* 6. STOK SERANG (Format Penandaan <= N) */}
                     <td className="py-3 px-3 text-right">
                       {isT3Crit ? (
                         <div className="inline-flex flex-col items-end">
@@ -452,7 +674,7 @@ export function StockTable({
                       )}
                     </td>
 
-                    {/* PADA SEBELAH KANAN TABEL ADA CHECKBOX: JIKA CHECKBOX TELAH DICEKLIS MAKA DATA SUDAH DICEK */}
+                    {/* PADA SEBELAH KANAN TABEL ADA CHECKBOX */}
                     <td className="py-3 px-4 text-center bg-indigo-50/20 border-l border-indigo-100">
                       <div className="flex flex-col items-center justify-center gap-1">
                         <label className="inline-flex items-center gap-2 cursor-pointer select-none">
@@ -482,7 +704,7 @@ export function StockTable({
                       </div>
                     </td>
 
-                    {/* VALIDASI ADMIN COLUMN: Admin bisa beri tanda jika terlewat */}
+                    {/* VALIDASI ADMIN COLUMN */}
                     <td className="py-3 px-3 text-center border-l border-slate-200">
                       {currentRole === 'ADMIN' ? (
                         <button
@@ -499,7 +721,6 @@ export function StockTable({
                           <span>{item.adminFlagged ? 'Revisi Aktif' : 'Tandai Terlewat'}</span>
                         </button>
                       ) : (
-                        // Checker view
                         item.adminFlagged ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
                             <AlertTriangle className="w-3 h-3 text-amber-600" />
@@ -525,14 +746,14 @@ export function StockTable({
       </div>
 
       {/* Table Footer with Summary Stats */}
-      <div className="bg-slate-50 px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
+      <div className="bg-slate-50 px-3 sm:px-4 py-3 border-t border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] sm:text-xs text-slate-500">
         <div>
-          Menampilkan <strong>{filteredItems.length}</strong> dari <strong>{items.length}</strong> total barang (diurutkan A-Z)
+          Menampilkan <strong>{filteredItems.length}</strong> dari <strong>{items.length}</strong> barang (Urut A-Z)
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block" />
-            <span>Merah: Stok Sempu/Pilar/Serang &le; {thresholdN} unit</span>
+            <span>Merah: Stok Toko &le; {thresholdN}</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
@@ -540,7 +761,7 @@ export function StockTable({
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
-            <span>Kuning: Ditandai Terlewat oleh Admin</span>
+            <span>Kuning: Tanda Terlewat</span>
           </span>
         </div>
       </div>

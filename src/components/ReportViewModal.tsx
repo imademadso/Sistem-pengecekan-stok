@@ -37,33 +37,41 @@ export function ReportViewModal({ isOpen, report, onClose }: ReportViewModalProp
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-5xl w-full overflow-hidden my-4 sm:my-8 animate-in fade-in zoom-in-95 duration-150">
         
         {/* Modal Top Bar (Hidden in Print) */}
-        <div className="no-print bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-              <ShieldCheck className="w-5 h-5" />
+        <div className="no-print bg-slate-900 text-white px-4 sm:px-6 py-3.5 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center justify-between sm:justify-start gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-sm sm:text-base font-bold text-white truncate">
+                  Laporan Hasil Pengecekan Stok
+                </h2>
+                <p className="text-xs text-slate-400 truncate">
+                  Telah divalidasi oleh Admin Gudang
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-bold text-white">
-                Tahap 5: Laporan Hasil Pengecekan Stok (Tersimpan)
-              </h2>
-              <p className="text-xs text-slate-400">
-                Pengecekan telah divalidasi oleh Admin. Siap diekspor ke Excel atau dicetak resmi.
-              </p>
-            </div>
+            <button
+              onClick={onClose}
+              className="sm:hidden text-slate-400 hover:text-white p-1 rounded-lg transition-colors shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={handleExportExcel}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors"
             >
               <FileSpreadsheet className="w-4 h-4" />
-              <span>Ekspor Excel (.xlsx)</span>
+              <span>Ekspor Excel</span>
             </button>
 
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-colors"
             >
               <Printer className="w-4 h-4" />
               <span>Cetak / PDF</span>
@@ -71,7 +79,7 @@ export function ReportViewModal({ isOpen, report, onClose }: ReportViewModalProp
 
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors ml-2"
+              className="hidden sm:block text-slate-400 hover:text-white p-1.5 rounded-lg transition-colors ml-1"
             >
               <X className="w-5 h-5" />
             </button>
@@ -206,7 +214,7 @@ export function ReportViewModal({ isOpen, report, onClose }: ReportViewModalProp
           )}
 
           {/* Clean 6-Column Data Table: Kode Item, Nama Item, Pusat, Sempu, Pilar, Serang */}
-          <div className="border border-slate-200 rounded-xl overflow-hidden">
+          <div className="border border-slate-200 rounded-xl overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">

@@ -49,7 +49,9 @@ import {
   getStoredAuthUser,
   saveStoredAuthUser,
   createDefaultSession,
-  PREDEFINED_ACCOUNTS
+  PREDEFINED_ACCOUNTS,
+  getStoredUsers,
+  saveStoredUsers
 } from './utils/storage';
 import { 
   subscribeToActiveSession, 
@@ -100,7 +102,7 @@ export default function App() {
   // Modals & Popups
   const [isInputModalOpen, setIsInputModalOpen] = useState(false);
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
-  const [usersList, setUsersList] = useState<UserAccountDoc[]>(PREDEFINED_ACCOUNTS);
+  const [usersList, setUsersList] = useState<UserAccountDoc[]>(getStoredUsers);
   const [flaggingItem, setFlaggingItem] = useState<StockItem | null>(null);
   const [viewingReport, setViewingReport] = useState<AuditReportSummary | null>(null);
 
@@ -133,10 +135,11 @@ export default function App() {
       (remoteUsers) => {
         if (remoteUsers && remoteUsers.length > 0) {
           setUsersList(remoteUsers);
+          saveStoredUsers(remoteUsers);
           // If authUser is logged in, ensure their displayed name stays in sync
           setAuthUser((prev) => {
             if (!prev) return prev;
-            const match = remoteUsers.find((u) => u.username === prev.username);
+            const match = remoteUsers.find((u) => u.username.toLowerCase() === prev.username.toLowerCase());
             if (match && match.name !== prev.name) {
               const updatedAuth: AuthUser = { ...prev, name: match.name, role: match.role };
               saveStoredAuthUser(updatedAuth);
@@ -201,14 +204,21 @@ export default function App() {
 
   // Handle user updated from UserManagementModal
   const handleUserUpdated = (updatedUser: UserAccountDoc) => {
-    setUsersList((prev) =>
-      prev.map((u) => (u.username === updatedUser.username ? { ...u, ...updatedUser } : u))
-    );
+    const cleanUsername = updatedUser.username.toLowerCase().trim();
 
-    // If current logged-in user was updated (e.g. Budi Santoso renamed to new name)
-    if (authUser?.username === updatedUser.username || (updatedUser.role === 'ADMIN' && authUser?.role === 'ADMIN')) {
+    setUsersList((prev) => {
+      const exists = prev.some((u) => u.username.toLowerCase() === cleanUsername);
+      const next = exists
+        ? prev.map((u) => (u.username.toLowerCase() === cleanUsername ? { ...u, ...updatedUser } : u))
+        : [...prev, updatedUser];
+      saveStoredUsers(next);
+      return next;
+    });
+
+    // If current logged-in user was updated
+    if (authUser && (authUser.username.toLowerCase() === cleanUsername || (updatedUser.role === 'ADMIN' && authUser.role === 'ADMIN'))) {
       const updatedAuth: AuthUser = {
-        username: updatedUser.username,
+        username: cleanUsername,
         name: updatedUser.name,
         role: updatedUser.role,
       };
@@ -216,16 +226,22 @@ export default function App() {
       saveStoredAuthUser(updatedAuth);
     }
 
-    // If admin name changed, update the active session's namaAdmin
+    // Update active session with the updated name
     if (updatedUser.role === 'ADMIN') {
       const updatedSession: AuditSession = {
         ...session,
         namaAdmin: `${updatedUser.name} (Admin Gudang)`,
       };
       updateSession(updatedSession);
+    } else if (updatedUser.role === 'USER_CHECKER') {
+      const updatedSession: AuditSession = {
+        ...session,
+        namaChecker: `${updatedUser.name} (Petugas Cek)`,
+      };
+      updateSession(updatedSession);
     }
 
-    showToast(`Nama pengguna berhasil diperbarui menjadi "${updatedUser.name}". Tersimpan di database cloud!`, 'success');
+    showToast(`Data pengguna "${updatedUser.name}" berhasil diperbarui dan tersimpan!`, 'success');
   };
 
   // Sync session changes to both local state and Firestore (propagates instantly to 2nd user)
@@ -596,8 +612,8 @@ export default function App() {
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
                 {role === 'ADMIN'
-                  ? 'Admin Abdus Shomad berhak mengubah ambang batas kritis (N), menginput data stok (.xlsx), meninjau kelengkapan, menandai barang terlewat, dan memvalidasi laporan akhir.'
-                  : 'Petugas Cek Saiful Anwar bertugas memeriksa fisik barang dan mencentang checkbox hingga tuntas. Mode admin dikunci untuk mencegah manipulasi data.'}
+                  ? `Admin ${authUser?.name || 'Gudang'} berhak mengubah ambang batas kritis (N), menginput data stok (.xlsx), meninjau kelengkapan, menandai barang terlewat, dan memvalidasi laporan akhir.`
+                  : `Petugas Cek ${authUser?.name || 'Lapangan'} bertugas memeriksa fisik barang dan mencentang checkbox hingga tuntas. Mode admin dikunci untuk mencegah manipulasi data.`}
               </p>
             </div>
           </div>

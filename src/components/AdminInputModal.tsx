@@ -196,10 +196,10 @@ export function AdminInputModal({
           </div>
 
           {/* Input Method Selector */}
-          <div className="flex border-b border-slate-200 gap-2">
+          <div className="flex border-b border-slate-200 gap-2 overflow-x-auto no-scrollbar whitespace-nowrap">
             <button
               onClick={() => setActiveTab('upload')}
-              className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 ${
+              className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'upload'
                   ? 'border-indigo-600 text-indigo-600'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -213,18 +213,18 @@ export function AdminInputModal({
                 setActiveTab('sample');
                 if (!previewItems) handleLoadSample();
               }}
-              className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 ${
+              className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'sample'
                   ? 'border-indigo-600 text-indigo-600'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
               <Sparkles className="w-4 h-4 text-amber-500" />
-              <span>Gunakan Data Contoh (15 Barang)</span>
+              <span>Gunakan Data Standar (15 Barang)</span>
             </button>
             <button
               onClick={() => setActiveTab('manual')}
-              className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 ${
+              className={`pb-2.5 px-3 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'manual'
                   ? 'border-indigo-600 text-indigo-600'
                   : 'border-transparent text-slate-500 hover:text-slate-800'

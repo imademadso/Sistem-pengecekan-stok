@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Users, 
@@ -36,14 +36,21 @@ export function UserManagementModal({
   // Safe user list fallback
   const effectiveUsers = usersList.length > 0 ? usersList : PREDEFINED_ACCOUNTS;
 
-  // Find the admin account (Abdus Shomad)
-  const adminAccount = effectiveUsers.find((u) => u.username === 'admin') || 
+  // Find the admin account
+  const adminAccount = effectiveUsers.find((u) => u.username.toLowerCase() === 'admin') || 
                        effectiveUsers.find((u) => u.role === 'ADMIN') || 
                        PREDEFINED_ACCOUNTS[0];
 
-  // Quick rename state specifically for Abdus Shomad / Admin
+  // Quick rename state specifically for Admin
   const [budiNewName, setBudiNewName] = useState(adminAccount?.name || 'Abdus Shomad');
   const [isSavingBudi, setIsSavingBudi] = useState(false);
+
+  // Synchronize input value whenever adminAccount updates or modal opens
+  useEffect(() => {
+    if (adminAccount?.name) {
+      setBudiNewName(adminAccount.name);
+    }
+  }, [adminAccount?.name, isOpen]);
 
   // General user editing state
   const [editingUsername, setEditingUsername] = useState<string | null>(null);
@@ -89,10 +96,11 @@ export function UserManagementModal({
     );
   }
 
-  // Quick rename handler specifically for Budi Santoso / Admin
+  // Quick rename handler specifically for Admin
   const handleQuickRenameBudi = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!budiNewName.trim()) {
+    const cleanName = budiNewName.trim();
+    if (!cleanName) {
       setErrorMsg('Nama baru tidak boleh kosong!');
       return;
     }
@@ -101,32 +109,25 @@ export function UserManagementModal({
     setErrorMsg(null);
 
     try {
-      const targetUsername = adminAccount.username || 'admin';
+      const targetUsername = (adminAccount.username || 'admin').toLowerCase().trim();
       const updates: Partial<UserAccountDoc> = {
-        name: budiNewName.trim(),
+        name: cleanName,
         updatedAt: new Date().toISOString(),
       };
 
-      await updateUserInFirestore(targetUsername, updates);
-
-      const updatedAccount: UserAccountDoc = {
-        ...adminAccount,
-        ...updates,
-        name: budiNewName.trim(),
-      };
-
-      onUserUpdated(updatedAccount);
-      setSuccessMsg(`Nama Admin (Budi Santoso) berhasil diubah menjadi "${budiNewName.trim()}". Tersimpan di database cloud.`);
-      setTimeout(() => setSuccessMsg(null), 4500);
+      const savedDoc = await updateUserInFirestore(targetUsername, updates);
+      onUserUpdated(savedDoc);
+      setSuccessMsg(`Nama Admin berhasil diubah menjadi "${cleanName}". Perubahan langsung tersimpan di database.`);
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal mengubah nama Budi Santoso ke database cloud.');
+      setErrorMsg(err.message || 'Gagal mengubah nama Admin ke database.');
     } finally {
       setIsSavingBudi(false);
     }
   };
 
   const startEdit = (user: UserAccountDoc) => {
-    setEditingUsername(user.username);
+    setEditingUsername(user.username.toLowerCase().trim());
     setFormName(user.name);
     setFormTitle(user.title || '');
     setFormPassword(user.password || '123');
@@ -137,7 +138,8 @@ export function UserManagementModal({
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUsername) return;
-    if (!formName.trim()) {
+    const cleanName = formName.trim();
+    if (!cleanName) {
       setErrorMsg('Nama pengguna tidak boleh kosong!');
       return;
     }
@@ -146,24 +148,21 @@ export function UserManagementModal({
     setErrorMsg(null);
 
     try {
+      const targetUsername = editingUsername.toLowerCase().trim();
+      const targetUser = effectiveUsers.find((u) => u.username.toLowerCase() === targetUsername);
+
       const updates: Partial<UserAccountDoc> = {
-        name: formName.trim(),
+        name: cleanName,
         title: formTitle.trim(),
         password: formPassword.trim() || '123',
+        role: targetUser?.role || (targetUsername === 'admin' ? 'ADMIN' : 'USER_CHECKER'),
+        updatedAt: new Date().toISOString(),
       };
 
-      await updateUserInFirestore(editingUsername, updates);
+      const savedDoc = await updateUserInFirestore(targetUsername, updates);
+      onUserUpdated(savedDoc);
 
-      const target = effectiveUsers.find((u) => u.username === editingUsername);
-      if (target) {
-        onUserUpdated({
-          ...target,
-          ...updates,
-          name: formName.trim(),
-        });
-      }
-
-      setSuccessMsg(`Data pengguna "${formName.trim()}" berhasil disimpan ke database.`);
+      setSuccessMsg(`Data pengguna "${cleanName}" (@${targetUsername}) berhasil diperbarui dan tersimpan.`);
       setEditingUsername(null);
       setTimeout(() => setSuccessMsg(null), 3500);
     } catch (err: any) {
@@ -175,7 +174,9 @@ export function UserManagementModal({
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUsername.trim() || !newName.trim()) {
+    const cleanUsername = newUsername.trim().toLowerCase();
+    const cleanName = newName.trim();
+    if (!cleanUsername || !cleanName) {
       setErrorMsg('Username dan Nama wajib diisi!');
       return;
     }
@@ -185,19 +186,22 @@ export function UserManagementModal({
 
     try {
       const newUser: UserAccountDoc = {
-        username: newUsername.trim().toLowerCase(),
-        name: newName.trim(),
+        username: cleanUsername,
+        name: cleanName,
         role: newRole,
         password: newPassword.trim() || '123',
         title: newTitle.trim() || (newRole === 'ADMIN' ? 'Admin Gudang' : 'Petugas Cek Lapangan'),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
-      await createUserInFirestore(newUser);
+      const created = await createUserInFirestore(newUser);
+      onUserUpdated(created);
       setShowAddUser(false);
       setNewUsername('');
       setNewName('');
       setNewTitle('');
-      setSuccessMsg(`Pengguna baru "${newUser.name}" berhasil ditambahkan ke database cloud.`);
+      setSuccessMsg(`Pengguna baru "${created.name}" (@${created.username}) berhasil ditambahkan ke database.`);
       setTimeout(() => setSuccessMsg(null), 3500);
     } catch (err: any) {
       setErrorMsg(err.message || 'Gagal menambahkan pengguna baru.');
@@ -211,35 +215,35 @@ export function UserManagementModal({
       <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150 my-6">
         
         {/* Header */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+        <div className="bg-slate-900 text-white px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">
               <UserCog className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-sm sm:text-base text-white">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-bold text-sm sm:text-base text-white truncate">
                   Pengaturan Pengguna & Nama User
                 </h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/40">
                   Khusus Admin
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
-                Ubah nama akun Budi Santoso, perbarui profil, atau tambah petugas cek baru
+              <p className="text-xs text-slate-400 truncate">
+                Perbarui profil akun, nama Admin, atau tambah petugas cek baru
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
+            className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+        <div className="p-3.5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           
           {/* Notification Messages */}
           {successMsg && (
@@ -256,22 +260,22 @@ export function UserManagementModal({
             </div>
           )}
 
-          {/* SPOTLIGHT CARD: Ubah Nama Budi Santoso (Permintaan User #7) */}
-          <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-50 via-blue-50 to-indigo-50/70 border-2 border-indigo-300 shadow-xs space-y-3">
+          {/* SPOTLIGHT CARD: Ubah Nama Admin */}
+          <div className="p-3.5 sm:p-4 rounded-xl bg-gradient-to-br from-indigo-50 via-blue-50 to-indigo-50/70 border-2 border-indigo-300 shadow-xs space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="font-black text-xs sm:text-sm text-indigo-950 flex items-center gap-1.5">
+                  <h4 className="font-black text-xs sm:text-sm text-indigo-950 flex items-center gap-1.5 flex-wrap">
                     <span>Ubah Nama Admin: <strong>{adminAccount.name}</strong></span>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
                       @{adminAccount.username}
                     </span>
                   </h4>
                   <p className="text-[11px] text-slate-500">
-                    Ketik nama baru untuk memperbarui akun Admin (contoh: Abdus Shomad)
+                    Ketik nama baru untuk memperbarui profil Admin
                   </p>
                 </div>
               </div>
@@ -285,14 +289,14 @@ export function UserManagementModal({
                     required
                     value={budiNewName}
                     onChange={(e) => setBudiNewName(e.target.value)}
-                    placeholder="Masukkan nama baru (contoh: Abdus Shomad / Matsunaga)"
+                    placeholder="Masukkan nama baru admin"
                     className="w-full text-xs px-3.5 py-2.5 bg-white border border-indigo-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none font-semibold text-slate-900 shadow-2xs"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={isSavingBudi || !budiNewName.trim() || budiNewName.trim() === adminAccount.name}
-                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition-colors shrink-0"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-xs transition-colors w-full sm:w-auto shrink-0"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSavingBudi ? 'Menyimpan...' : 'Simpan Nama Admin'}</span>

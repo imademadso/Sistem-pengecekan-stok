@@ -4,6 +4,7 @@ import { RAW_SAMPLE_ITEMS, cleanAndSortItemsAZ } from './sampleData';
 const STORAGE_ACTIVE_SESSION_KEY = 'stok_opname_active_session_v1';
 const STORAGE_REPORTS_KEY = 'stok_opname_reports_v1';
 const STORAGE_AUTH_USER_KEY = 'stok_opname_auth_user_v1';
+const STORAGE_USERS_KEY = 'stok_opname_users_v1';
 
 // Predefined accounts
 export const PREDEFINED_ACCOUNTS = [
@@ -23,18 +24,62 @@ export const PREDEFINED_ACCOUNTS = [
   },
 ];
 
+export function getStoredUsers(): typeof PREDEFINED_ACCOUNTS {
+  try {
+    const val = localStorage.getItem(STORAGE_USERS_KEY);
+    if (val) {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return PREDEFINED_ACCOUNTS;
+}
+
+export function saveStoredUsers(users: any[]) {
+  try {
+    localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users));
+  } catch (e) {
+    console.error('Failed to save users locally', e);
+  }
+}
+
+export function updateStoredUser(updatedUser: { username: string; [key: string]: any }) {
+  try {
+    const current = getStoredUsers();
+    const index = current.findIndex(
+      (u) => u.username.toLowerCase() === updatedUser.username.toLowerCase()
+    );
+    let nextList;
+    if (index >= 0) {
+      nextList = current.map((u, i) => (i === index ? { ...u, ...updatedUser } : u));
+    } else {
+      nextList = [...current, updatedUser];
+    }
+    saveStoredUsers(nextList);
+    return nextList;
+  } catch (e) {
+    console.error('Failed to update user locally', e);
+    return getStoredUsers();
+  }
+}
+
 export function getStoredAuthUser(): AuthUser | null {
   try {
     const val = localStorage.getItem(STORAGE_AUTH_USER_KEY);
     if (val) {
       const parsed: AuthUser = JSON.parse(val);
-      // Auto-migrate old names if present in localStorage
-      if (parsed.username === 'admin' && (parsed.name === 'Budi Santoso' || !parsed.name)) {
-        parsed.name = 'Abdus Shomad';
-        saveStoredAuthUser(parsed);
-      } else if (parsed.username === 'petugas' && (parsed.name === 'Ahmad Fauzi' || !parsed.name)) {
-        parsed.name = 'Saiful Anwar';
-        saveStoredAuthUser(parsed);
+      // Auto sync with latest name from stored users
+      const storedUsers = getStoredUsers();
+      const matched = storedUsers.find(
+        (u) => u.username.toLowerCase() === parsed.username.toLowerCase()
+      );
+      if (matched && matched.name) {
+        parsed.name = matched.name;
+        parsed.role = matched.role as UserRole;
       }
       return parsed;
     }
@@ -58,27 +103,31 @@ export function saveStoredAuthUser(user: AuthUser | null) {
 }
 
 export function createDefaultSession(): AuditSession {
-  const initialStockItems: StockItem[] = RAW_SAMPLE_ITEMS.map((item, idx) => ({
+  // Production ready: Items start unchecked for clean real audit
+  const initialStockItems: StockItem[] = RAW_SAMPLE_ITEMS.map((item) => ({
     ...item,
-    isChecked: idx < 6, // simulate some checked items for immediate visual fidelity
-    checkedAt: idx < 6 ? new Date(Date.now() - (idx + 1) * 300000).toISOString() : null,
-    checkedBy: idx < 6 ? 'Saiful Anwar (Petugas Cek)' : null,
+    isChecked: false,
+    checkedAt: null,
+    checkedBy: null,
     adminFlagged: false,
     adminNote: '',
     userNote: '',
   }));
 
   const sortedItems = cleanAndSortItemsAZ(initialStockItems);
+  const storedUsers = getStoredUsers();
+  const adminAcc = storedUsers.find((u) => u.username === 'admin') || PREDEFINED_ACCOUNTS[0];
+  const checkerAcc = storedUsers.find((u) => u.username === 'petugas') || PREDEFINED_ACCOUNTS[1];
 
   return {
     id: `session-${Date.now()}`,
     judul: 'Stock Opname Periode Berjalan',
     tanggalDibuat: new Date().toISOString(),
-    thresholdN: 36, // Ambang batas N yang diminta user (contoh N=36)
+    thresholdN: 36, // Ambang batas N yang diminta user
     items: sortedItems,
     status: 'SEDANG_DICEK',
-    namaAdmin: 'Abdus Shomad (Admin Gudang)',
-    namaChecker: 'Saiful Anwar (Petugas Cek)',
+    namaAdmin: `${adminAcc.name} (Admin Gudang)`,
+    namaChecker: `${checkerAcc.name} (Petugas Cek)`,
     catatanValidasi: '',
   };
 }

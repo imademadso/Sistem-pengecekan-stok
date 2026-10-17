@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { AuditSession, AuditReportSummary, AuthUser, StockItem, UserRole } from '../types/stock';
-import { PREDEFINED_ACCOUNTS, createDefaultSession } from '../utils/storage';
+import { PREDEFINED_ACCOUNTS, createDefaultSession, getStoredUsers, saveStoredUsers, updateStoredUser } from '../utils/storage';
 
 const ACTIVE_SESSION_DOC = 'active_session';
 
@@ -28,26 +28,20 @@ export interface UserAccountDoc {
  */
 export async function seedInitialUsers(): Promise<void> {
   try {
-    for (const acc of PREDEFINED_ACCOUNTS) {
-      const userRef = doc(db, 'users', acc.username);
+    const defaultAccounts = getStoredUsers();
+    for (const acc of defaultAccounts) {
+      const cleanUsername = acc.username.toLowerCase().trim();
+      const userRef = doc(db, 'users', cleanUsername);
       const snap = await getDoc(userRef);
       if (!snap.exists()) {
         await setDoc(userRef, {
-          username: acc.username,
+          username: cleanUsername,
           name: acc.name,
           role: acc.role,
-          password: acc.password,
-          title: acc.title,
+          password: acc.password || '123',
+          title: acc.title || '',
           createdAt: new Date().toISOString(),
         });
-      } else {
-        const data = snap.data();
-        // Migrate old names Budi Santoso -> Abdus Shomad and Ahmad Fauzi -> Saiful Anwar
-        if (acc.username === 'admin' && (data.name === 'Budi Santoso' || !data.name)) {
-          await setDoc(userRef, { ...data, name: 'Abdus Shomad' }, { merge: true });
-        } else if (acc.username === 'petugas' && (data.name === 'Ahmad Fauzi' || !data.name)) {
-          await setDoc(userRef, { ...data, name: 'Saiful Anwar' }, { merge: true });
-        }
       }
     }
   } catch (error) {
@@ -69,15 +63,30 @@ export function subscribeToUsers(
     (snapshot) => {
       const users: UserAccountDoc[] = [];
       snapshot.forEach((docSnap) => {
-        users.push(docSnap.data() as UserAccountDoc);
+        const data = docSnap.data();
+        const username = (data.username || docSnap.id).toLowerCase().trim();
+        users.push({
+          username,
+          name: data.name || username,
+          role: data.role || (username === 'admin' ? 'ADMIN' : 'USER_CHECKER'),
+          title: data.title || '',
+          password: data.password || '123',
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
+        });
       });
+
       // Sort: Admin first, then alphabetical
       users.sort((a, b) => {
         if (a.role === 'ADMIN' && b.role !== 'ADMIN') return -1;
         if (a.role !== 'ADMIN' && b.role === 'ADMIN') return 1;
         return a.name.localeCompare(b.name);
       });
-      onUpdate(users);
+
+      if (users.length > 0) {
+        saveStoredUsers(users);
+        onUpdate(users);
+      }
     },
     (error) => {
       handleFirestoreError(error, OperationType.GET, 'users');
@@ -87,51 +96,77 @@ export function subscribeToUsers(
 }
 
 /**
- * Update user details (e.g. rename 'Budi Santoso' to any name) in Firestore
+ * Update user details in Firestore and persist locally
  */
 export async function updateUserInFirestore(
   username: string,
   updates: Partial<UserAccountDoc>
-): Promise<void> {
+): Promise<UserAccountDoc> {
+  const cleanUsername = username.toLowerCase().trim();
+  const userRef = doc(db, 'users', cleanUsername);
+
   try {
-    const userRef = doc(db, 'users', username.toLowerCase().trim());
     const snap = await getDoc(userRef);
-    if (snap.exists()) {
-      await setDoc(userRef, {
-        ...snap.data(),
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      }, { merge: true });
-    } else {
-      // If document didn't exist yet, create it with updates
-      await setDoc(userRef, {
-        username: username.toLowerCase().trim(),
-        name: updates.name || username,
-        role: updates.role || 'ADMIN',
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      });
-    }
+    const existing = snap.exists() ? snap.data() : {};
+
+    const finalDoc: UserAccountDoc = {
+      username: cleanUsername,
+      name: updates.name ? updates.name.trim() : (existing.name || cleanUsername),
+      role: updates.role || existing.role || (cleanUsername === 'admin' ? 'ADMIN' : 'USER_CHECKER'),
+      title: updates.title !== undefined ? updates.title.trim() : (existing.title || ''),
+      password: updates.password || existing.password || '123',
+      createdAt: existing.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Save to Firestore with merge
+    await setDoc(userRef, finalDoc, { merge: true });
+
+    // Sync to local storage
+    updateStoredUser(finalDoc);
+
+    return finalDoc;
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `users/${username}`);
-    throw error;
+    handleFirestoreError(error, OperationType.WRITE, `users/${cleanUsername}`);
+    // Save to local storage even if Firestore fails
+    const fallbackDoc: UserAccountDoc = {
+      username: cleanUsername,
+      name: updates.name?.trim() || cleanUsername,
+      role: updates.role || (cleanUsername === 'admin' ? 'ADMIN' : 'USER_CHECKER'),
+      title: updates.title !== undefined ? updates.title.trim() : '',
+      password: updates.password || '123',
+      updatedAt: new Date().toISOString(),
+    };
+    updateStoredUser(fallbackDoc);
+    return fallbackDoc;
   }
 }
 
 /**
- * Create a new user in Firestore
+ * Create a new user in Firestore and local storage
  */
-export async function createUserInFirestore(userData: UserAccountDoc): Promise<void> {
+export async function createUserInFirestore(userData: UserAccountDoc): Promise<UserAccountDoc> {
+  const cleanUsername = userData.username.toLowerCase().trim();
+  const finalDoc: UserAccountDoc = {
+    ...userData,
+    username: cleanUsername,
+    name: userData.name.trim(),
+    role: userData.role,
+    title: userData.title?.trim() || '',
+    password: userData.password?.trim() || '123',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
   try {
-    const userRef = doc(db, 'users', userData.username.toLowerCase().trim());
-    await setDoc(userRef, {
-      ...userData,
-      username: userData.username.toLowerCase().trim(),
-      createdAt: new Date().toISOString(),
-    });
+    const userRef = doc(db, 'users', cleanUsername);
+    await setDoc(userRef, finalDoc);
+    updateStoredUser(finalDoc);
+    return finalDoc;
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, `users/${userData.username}`);
-    throw error;
+    handleFirestoreError(error, OperationType.WRITE, `users/${cleanUsername}`);
+    updateStoredUser(finalDoc);
+    return finalDoc;
   }
 }
 

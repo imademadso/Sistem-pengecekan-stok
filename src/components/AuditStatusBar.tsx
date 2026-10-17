@@ -199,11 +199,11 @@ export function AuditStatusBar({
 
             {/* Validation Action */}
             {currentRole === 'ADMIN' ? (
-              <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 shrink-0">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowNotesInput(!showNotesInput)}
-                  className="text-xs text-blue-700 underline font-medium hover:text-blue-900"
+                  className="text-xs text-blue-700 underline font-medium hover:text-blue-900 text-center sm:text-right py-1"
                 >
                   {showNotesInput ? 'Tutup Catatan' : '+ Catatan Admin (Opsional)'}
                 </button>
@@ -211,20 +211,20 @@ export function AuditStatusBar({
                   type="button"
                   disabled={!canValidate}
                   onClick={() => onValidateAndSaveReport(adminNotes)}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                  className="flex items-center justify-center gap-2 px-4 sm:px-5 py-3 sm:py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all active:scale-95 cursor-pointer w-full sm:w-auto"
                 >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>VALIDASI SELESAI & SIMPAN LAPORAN</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ShieldCheck className="w-4 h-4 shrink-0" />
+                  <span className="truncate">VALIDASI & SIMPAN LAPORAN</span>
+                  <ArrowRight className="w-3.5 h-3.5 shrink-0" />
                 </button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={onUserSubmitToCheck}
-                className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs shrink-0"
+                className="flex items-center justify-center gap-1.5 px-4 py-3 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs w-full sm:w-auto shrink-0"
               >
-                <Send className="w-3.5 h-3.5" />
+                <Send className="w-3.5 h-3.5 shrink-0" />
                 <span>Kirim Notifikasi ke Admin</span>
               </button>
             )}

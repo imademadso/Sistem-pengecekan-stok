@@ -11,7 +11,7 @@ import {
   X
 } from 'lucide-react';
 import { AuthUser, UserRole } from '../types/stock';
-import { PREDEFINED_ACCOUNTS } from '../utils/storage';
+import { PREDEFINED_ACCOUNTS, getStoredUsers } from '../utils/storage';
 import { authenticateFromFirestore } from '../services/stockSyncService';
 
 interface LoginModalProps {
@@ -27,9 +27,13 @@ export function LoginModal({
   onClose,
   onLoginSuccess,
 }: LoginModalProps) {
+  const storedUsers = getStoredUsers();
+  const currentAdmin = storedUsers.find((u) => u.username.toLowerCase() === 'admin') || PREDEFINED_ACCOUNTS[0];
+  const currentChecker = storedUsers.find((u) => u.username.toLowerCase() === 'petugas') || PREDEFINED_ACCOUNTS[1];
+
   const [selectedRole, setSelectedRole] = useState<UserRole>('ADMIN');
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('123');
+  const [username, setUsername] = useState(currentAdmin.username);
+  const [password, setPassword] = useState(currentAdmin.password || '123');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -39,11 +43,11 @@ export function LoginModal({
     setSelectedRole(role);
     setErrorMsg(null);
     if (role === 'ADMIN') {
-      setUsername('admin');
-      setPassword('123');
+      setUsername(currentAdmin.username);
+      setPassword(currentAdmin.password || '123');
     } else {
-      setUsername('petugas');
-      setPassword('123');
+      setUsername(currentChecker.username);
+      setPassword(currentChecker.password || '123');
     }
   };
 
@@ -61,8 +65,9 @@ export function LoginModal({
         return;
       }
 
-      // 2. Fallback to predefined accounts
-      const found = PREDEFINED_ACCOUNTS.find(
+      // 2. Fallback to stored accounts
+      const allAccounts = getStoredUsers();
+      const found = allAccounts.find(
         (acc) =>
           acc.username.toLowerCase() === username.trim().toLowerCase() &&
           acc.password === password.trim()
@@ -78,11 +83,10 @@ export function LoginModal({
         return;
       }
 
-      setErrorMsg('Username atau password salah! Periksa kembali atau gunakan tombol demo.');
-    } catch (err: any) {
-      console.warn('Login database fallback', err);
-      // Fallback
-      const found = PREDEFINED_ACCOUNTS.find(
+      setErrorMsg('Username atau password salah! Periksa kembali data login Anda.');
+    } catch {
+      const allAccounts = getStoredUsers();
+      const found = allAccounts.find(
         (acc) =>
           acc.username.toLowerCase() === username.trim().toLowerCase() &&
           acc.password === password.trim()
@@ -102,7 +106,8 @@ export function LoginModal({
   };
 
   const handleQuickLogin = (role: UserRole) => {
-    const acc = PREDEFINED_ACCOUNTS.find((a) => a.role === role);
+    const allAccounts = getStoredUsers();
+    const acc = allAccounts.find((a) => a.role === role) || PREDEFINED_ACCOUNTS.find((a) => a.role === role);
     if (acc) {
       onLoginSuccess({
         username: acc.username,
@@ -252,28 +257,28 @@ export function LoginModal({
             </button>
           </form>
 
-          {/* Quick Demo Login Buttons */}
+          {/* Quick Login Buttons */}
           <div className="pt-3 border-t border-slate-100">
             <span className="text-[11px] font-bold text-slate-400 block mb-2 flex items-center gap-1">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Login Cepat Demo (1-Klik):</span>
+              <span>Akses Cepat Pengguna Resmi (1-Klik):</span>
             </span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => handleQuickLogin('ADMIN')}
-                className="py-2 px-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-900 rounded-lg text-[11px] font-semibold text-center transition-colors flex flex-col items-center gap-0.5"
+                className="py-2 px-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-900 rounded-xl text-[11px] font-semibold text-center transition-colors flex flex-col items-center gap-0.5"
               >
                 <span className="font-bold text-indigo-950">Admin Gudang</span>
-                <span className="text-[10px] text-indigo-700">Abdus Shomad</span>
+                <span className="text-[10px] text-indigo-700 truncate max-w-full">{currentAdmin.name}</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleQuickLogin('USER_CHECKER')}
-                className="py-2 px-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 rounded-lg text-[11px] font-semibold text-center transition-colors flex flex-col items-center gap-0.5"
+                className="py-2 px-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 rounded-xl text-[11px] font-semibold text-center transition-colors flex flex-col items-center gap-0.5"
               >
                 <span className="font-bold text-blue-950">Petugas Cek</span>
-                <span className="text-[10px] text-blue-700">Saiful Anwar</span>
+                <span className="text-[10px] text-blue-700 truncate max-w-full">{currentChecker.name}</span>
               </button>
             </div>
             <p className="text-[10px] text-slate-400 mt-2 text-center">
