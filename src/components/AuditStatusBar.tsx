@@ -32,6 +32,7 @@ export function AuditStatusBar({
   const checkedCount = session.items.filter((i) => i.isChecked).length;
   const uncheckedCount = total - checkedCount;
   const flaggedCount = session.items.filter((i) => i.adminFlagged).length;
+  const discrepancyCount = session.items.filter((i) => i.isDiscrepancy).length;
   const percentage = total > 0 ? Math.round((checkedCount / total) * 100) : 0;
 
   const isAllChecked = total > 0 && checkedCount === total;
@@ -40,12 +41,12 @@ export function AuditStatusBar({
   const isFinalized = session.status === 'TERVALIDASI';
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-4">
       
       {/* Top Header & Progress */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center flex-wrap gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
               Progres Pengecekan Fisik Stok
             </span>
@@ -67,6 +68,13 @@ export function AuditStatusBar({
             ) : (
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
                 DALAM PROSES ({percentage}%)
+              </span>
+            )}
+
+            {discrepancyCount > 0 && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-100 text-orange-800 border border-orange-300 flex items-center gap-1 shadow-2xs">
+                <AlertTriangle className="w-3 h-3 text-orange-600" />
+                <span>{discrepancyCount} SELISIH FISIK PUSAT</span>
               </span>
             )}
           </div>

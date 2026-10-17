@@ -18,6 +18,9 @@ import {
   AdminFlagModal 
 } from './components/AdminFlagModal';
 import { 
+  StockDiscrepancyModal 
+} from './components/StockDiscrepancyModal';
+import { 
   ReportViewModal 
 } from './components/ReportViewModal';
 import { 
@@ -104,6 +107,7 @@ export default function App() {
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
   const [usersList, setUsersList] = useState<UserAccountDoc[]>(getStoredUsers);
   const [flaggingItem, setFlaggingItem] = useState<StockItem | null>(null);
+  const [discrepancyItem, setDiscrepancyItem] = useState<StockItem | null>(null);
   const [viewingReport, setViewingReport] = useState<AuditReportSummary | null>(null);
 
   // Toast / System Notification
@@ -365,6 +369,54 @@ export default function App() {
     showToast('Tanda terlewat telah dihapus.', 'info');
   };
 
+  // 2b. Checker / Admin Marks Physical Central Stock Discrepancy & Actual Stock
+  const handleSaveDiscrepancy = (itemId: string, actualStock: number, note: string) => {
+    const updatedItems = session.items.map((item) => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          isDiscrepancy: true,
+          stokPusatAktual: actualStock,
+          discrepancyNote: note,
+          discrepancyMarkedBy: authUser?.name || (role === 'ADMIN' ? session.namaAdmin : session.namaChecker),
+          discrepancyMarkedAt: new Date().toISOString(),
+        };
+      }
+      return item;
+    });
+
+    updateSession({
+      ...session,
+      items: updatedItems,
+    });
+
+    showToast(`Stok sebenarnya di pusat (${actualStock} unit) berhasil disimpan dan disinkronkan.`, 'success');
+  };
+
+  // Remove Discrepancy mark
+  const handleRemoveDiscrepancy = (itemId: string) => {
+    const updatedItems = session.items.map((item) => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          isDiscrepancy: false,
+          stokPusatAktual: null,
+          discrepancyNote: '',
+          discrepancyMarkedBy: undefined,
+          discrepancyMarkedAt: undefined,
+        };
+      }
+      return item;
+    });
+
+    updateSession({
+      ...session,
+      items: updatedItems,
+    });
+
+    showToast('Tanda ketidaksesuaian stok telah dihapus (stok kembali sesuai sistem).', 'info');
+  };
+
   // 3. Admin Validates & Saves Report (Tahap 4 & 5)
   const handleValidateAndSaveReport = (adminNotes: string) => {
     const total = session.items.length;
@@ -419,6 +471,7 @@ export default function App() {
       kritisToko1,
       kritisToko2,
       kritisToko3,
+      totalDiscrepancy: session.items.filter((i) => i.isDiscrepancy).length,
       items: [...session.items],
       catatanAdmin: adminNotes,
     };
@@ -697,6 +750,7 @@ export default function App() {
               isAuditFinalized={session.status === 'TERVALIDASI'}
               onToggleCheck={handleToggleCheck}
               onOpenFlagModal={(item) => setFlaggingItem(item)}
+              onOpenDiscrepancyModal={(item) => setDiscrepancyItem(item)}
               onBulkCheck={handleBulkCheck}
               onChangeThresholdN={handleChangeThresholdN}
             />
@@ -742,6 +796,14 @@ export default function App() {
         onClose={() => setFlaggingItem(null)}
         onSaveFlag={handleSaveAdminFlag}
         onRemoveFlag={handleRemoveAdminFlag}
+      />
+
+      <StockDiscrepancyModal
+        isOpen={!!discrepancyItem}
+        item={discrepancyItem}
+        onClose={() => setDiscrepancyItem(null)}
+        onSaveDiscrepancy={handleSaveDiscrepancy}
+        onRemoveDiscrepancy={handleRemoveDiscrepancy}
       />
 
       <ReportViewModal

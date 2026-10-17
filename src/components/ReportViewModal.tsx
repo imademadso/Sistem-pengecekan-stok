@@ -243,10 +243,24 @@ export function ReportViewModal({ isOpen, report, onClose }: ReportViewModalProp
                         {it.kodeItem}
                       </td>
                       <td className="py-2 px-3 font-medium text-slate-900">
-                        {it.namaItem}
+                        <div>{it.namaItem}</div>
+                        {it.isDiscrepancy && (
+                          <div className="text-[10px] text-orange-800 font-medium mt-0.5">
+                            * Selisih fisik: Aktual {it.stokPusatAktual} unit ({it.discrepancyNote || 'Stok tidak sesuai sistem'})
+                          </div>
+                        )}
                       </td>
-                      <td className="py-2 px-3 text-right font-mono text-slate-600">
-                        {it.stokPusat}
+                      <td className="py-2 px-3 text-right font-mono">
+                        {it.isDiscrepancy ? (
+                          <div className="flex flex-col items-end">
+                            <span className="line-through text-slate-400 text-[10px]">{it.stokPusat}</span>
+                            <span className="text-orange-700 font-bold bg-orange-100 px-1 py-0.5 rounded text-[11px]">
+                              Aktual: {it.stokPusatAktual}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-600">{it.stokPusat}</span>
+                        )}
                       </td>
                       <td className="py-2 px-3 text-right">
                         <span className={`font-mono ${isSempuCrit ? 'text-rose-600 font-bold' : 'text-slate-700'}`}>

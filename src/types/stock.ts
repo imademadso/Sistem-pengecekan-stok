@@ -13,6 +13,12 @@ export interface StockItem {
   adminFlagged?: boolean; // Tanda dari admin jika terlewat/perlu cek ulang
   adminNote?: string;
   userNote?: string;
+  // Penanda Ketidaksesuaian Stok Pusat (Physical Discrepancy)
+  isDiscrepancy?: boolean;
+  stokPusatAktual?: number | null; // Stok fisik sebenarnya yang diinput petugas
+  discrepancyNote?: string;
+  discrepancyMarkedBy?: string;
+  discrepancyMarkedAt?: string;
 }
 
 export type AuditStatus = 'DRAFT' | 'SEDANG_DICEK' | 'PERLU_REVISI' | 'TERVALIDASI';
@@ -47,6 +53,7 @@ export interface AuditReportSummary {
   kritisToko1: number;
   kritisToko2: number;
   kritisToko3: number;
+  totalDiscrepancy?: number;
   items: StockItem[];
   catatanAdmin?: string;
 }

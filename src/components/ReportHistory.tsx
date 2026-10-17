@@ -95,7 +95,7 @@ export function ReportHistory({
                   </span>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-slate-600">
                   <span className="flex items-center gap-1">
                     <Boxes className="w-3.5 h-3.5 text-slate-400" />
                     <strong>{rep.totalItem}</strong> jenis barang ({totalStok.toLocaleString('id-ID')} unit)
@@ -108,15 +108,21 @@ export function ReportHistory({
                     <AlertTriangle className="w-3.5 h-3.5" />
                     Batas Kritis N &le; <strong>{rep.thresholdN}</strong>
                   </span>
+                  {rep.totalDiscrepancy ? (
+                    <span className="flex items-center gap-1 text-orange-700 font-semibold bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
+                      <AlertTriangle className="w-3 h-3 text-orange-500" />
+                      {rep.totalDiscrepancy} Selisih Fisik Pusat
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2 shrink-0">
+              {/* Action Buttons with mobile wrap */}
+              <div className="flex items-center flex-wrap gap-2 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
                 <button
                   type="button"
                   onClick={() => onViewReport(rep)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors"
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors"
                 >
                   <Eye className="w-3.5 h-3.5" />
                   <span>Lihat / Cetak</span>
@@ -125,7 +131,7 @@ export function ReportHistory({
                 <button
                   type="button"
                   onClick={() => exportReportToExcel(rep)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-lg transition-colors"
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-xl transition-colors"
                   title="Unduh ulang file Excel .xlsx"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
@@ -139,7 +145,7 @@ export function ReportHistory({
                       onDeleteReport(rep.id);
                     }
                   }}
-                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                  className="p-2 sm:p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors ml-auto sm:ml-0"
                   title="Hapus Laporan"
                 >
                   <Trash2 className="w-4 h-4" />

@@ -219,7 +219,9 @@ export function exportReportToExcel(report: AuditReportSummary) {
       'NO',
       'KODE ITEM',
       'NAMA ITEM (A-Z)',
-      'PUSAT',
+      'PUSAT (SISTEM)',
+      'PUSAT (FISIK SEBENARNYA)',
+      'SELISIH PUSAT',
       'SEMPU',
       'STATUS SEMPU',
       'PILAR',
@@ -237,13 +239,21 @@ export function exportReportToExcel(report: AuditReportSummary) {
     const isSempuCrit = item.stokToko1 <= report.thresholdN ? `KRITIS (<= ${report.thresholdN})` : 'AMAN';
     const isPilarCrit = item.stokToko2 <= report.thresholdN ? `KRITIS (<= ${report.thresholdN})` : 'AMAN';
     const isSerangCrit = item.stokToko3 <= report.thresholdN ? `KRITIS (<= ${report.thresholdN})` : 'AMAN';
-    const total = item.stokPusat + item.stokToko1 + item.stokToko2 + item.stokToko3;
+    const actualPusat = item.isDiscrepancy && item.stokPusatAktual !== undefined && item.stokPusatAktual !== null 
+      ? item.stokPusatAktual 
+      : item.stokPusat;
+    const diffPusat = item.isDiscrepancy && item.stokPusatAktual !== undefined && item.stokPusatAktual !== null 
+      ? item.stokPusatAktual - item.stokPusat 
+      : 0;
+    const total = actualPusat + item.stokToko1 + item.stokToko2 + item.stokToko3;
 
     return [
       idx + 1,
       item.kodeItem,
       item.namaItem,
       item.stokPusat,
+      item.isDiscrepancy ? actualPusat : 'SESUAI',
+      item.isDiscrepancy ? (diffPusat > 0 ? `+${diffPusat}` : diffPusat) : 0,
       item.stokToko1,
       isSempuCrit,
       item.stokToko2,
@@ -253,7 +263,7 @@ export function exportReportToExcel(report: AuditReportSummary) {
       total,
       item.isChecked ? 'SUDAH DICEK' : 'BELUM DICEK',
       item.checkedAt ? new Date(item.checkedAt).toLocaleTimeString('id-ID') : '-',
-      item.adminNote || item.userNote || '-'
+      item.discrepancyNote ? `[Selisih: ${item.discrepancyNote}] ${item.adminNote || ''}` : (item.adminNote || item.userNote || '-')
     ];
   });
 

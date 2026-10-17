@@ -11,7 +11,11 @@ import {
   ArrowUpDown, 
   Filter,
   LayoutGrid,
-  Table as TableIcon
+  Table as TableIcon,
+  TrendingDown,
+  TrendingUp,
+  SlidersHorizontal,
+  Edit2
 } from 'lucide-react';
 import { StockItem, UserRole } from '../types/stock';
 
@@ -22,6 +26,7 @@ interface StockTableProps {
   isAuditFinalized: boolean;
   onToggleCheck: (itemId: string) => void;
   onOpenFlagModal: (item: StockItem) => void;
+  onOpenDiscrepancyModal: (item: StockItem) => void;
   onBulkCheck: (ids: string[], checked: boolean) => void;
   onChangeThresholdN?: (newN: number) => void;
 }
@@ -33,11 +38,12 @@ export function StockTable({
   isAuditFinalized,
   onToggleCheck,
   onOpenFlagModal,
+  onOpenDiscrepancyModal,
   onBulkCheck,
   onChangeThresholdN,
 }: StockTableProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterMode, setFilterMode] = useState<'ALL' | 'UNCHECKED' | 'CHECKED' | 'CRITICAL' | 'FLAGGED'>('ALL');
+  const [filterMode, setFilterMode] = useState<'ALL' | 'UNCHECKED' | 'CHECKED' | 'CRITICAL' | 'FLAGGED' | 'DISCREPANCY'>('ALL');
   const [isEditingN, setIsEditingN] = useState(false);
   const [tempN, setTempN] = useState(String(thresholdN));
   const [viewMode, setViewMode] = useState<'auto' | 'card' | 'table'>('auto');
@@ -74,6 +80,7 @@ export function StockTable({
         );
       }
       if (filterMode === 'FLAGGED') return !!item.adminFlagged;
+      if (filterMode === 'DISCREPANCY') return !!item.isDiscrepancy;
 
       return true;
     });
@@ -88,8 +95,9 @@ export function StockTable({
       (i) => i.stokToko1 <= thresholdN || i.stokToko2 <= thresholdN || i.stokToko3 <= thresholdN
     ).length;
     const flagged = items.filter((i) => i.adminFlagged).length;
+    const discrepancy = items.filter((i) => i.isDiscrepancy).length;
 
-    return { total, checked, unchecked, critical, flagged };
+    return { total, checked, unchecked, critical, flagged, discrepancy };
   }, [items, thresholdN]);
 
   const handleCheckVisibleAll = (shouldCheck: boolean) => {
@@ -118,6 +126,7 @@ export function StockTable({
             />
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => setSearchQuery('')}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-slate-400 hover:text-slate-600 p-1"
               >
@@ -249,6 +258,7 @@ export function StockTable({
           </span>
 
           <button
+            type="button"
             onClick={() => setFilterMode('ALL')}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 ${
               filterMode === 'ALL'
@@ -260,6 +270,7 @@ export function StockTable({
           </button>
 
           <button
+            type="button"
             onClick={() => setFilterMode('UNCHECKED')}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1 shrink-0 ${
               filterMode === 'UNCHECKED'
@@ -272,6 +283,7 @@ export function StockTable({
           </button>
 
           <button
+            type="button"
             onClick={() => setFilterMode('CHECKED')}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1 shrink-0 ${
               filterMode === 'CHECKED'
@@ -284,6 +296,7 @@ export function StockTable({
           </button>
 
           <button
+            type="button"
             onClick={() => setFilterMode('CRITICAL')}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1 shrink-0 ${
               filterMode === 'CRITICAL'
@@ -296,8 +309,26 @@ export function StockTable({
             <span>Kritis &le; {thresholdN} ({stats.critical})</span>
           </button>
 
+          {/* New Filter: Stok Pusat Tidak Sesuai / Selisih Fisik */}
+          <button
+            type="button"
+            onClick={() => setFilterMode('DISCREPANCY')}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1 shrink-0 ${
+              filterMode === 'DISCREPANCY'
+                ? 'bg-orange-600 text-white shadow-xs'
+                : stats.discrepancy > 0 
+                ? 'bg-orange-50 text-orange-800 hover:bg-orange-100 border border-orange-300 font-bold'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+            title="Tampilkan hanya barang dengan selisih fisik di gudang pusat"
+          >
+            <SlidersHorizontal className="w-3 h-3 text-orange-500" />
+            <span>Selisih Pusat ({stats.discrepancy})</span>
+          </button>
+
           {stats.flagged > 0 && (
             <button
+              type="button"
               onClick={() => setFilterMode('FLAGGED')}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1 shrink-0 ${
                 filterMode === 'FLAGGED'
@@ -326,6 +357,9 @@ export function StockTable({
             const isT1Crit = item.stokToko1 <= thresholdN;
             const isT2Crit = item.stokToko2 <= thresholdN;
             const isT3Crit = item.stokToko3 <= thresholdN;
+            const diffPusat = item.isDiscrepancy && item.stokPusatAktual !== undefined && item.stokPusatAktual !== null 
+              ? item.stokPusatAktual - item.stokPusat 
+              : 0;
 
             return (
               <div
@@ -333,6 +367,8 @@ export function StockTable({
                 className={`p-3.5 rounded-2xl border transition-all ${
                   item.adminFlagged
                     ? 'bg-amber-50/80 border-amber-400 ring-2 ring-amber-300/40'
+                    : item.isDiscrepancy
+                    ? 'bg-orange-50/40 border-orange-300 ring-1 ring-orange-200'
                     : item.isChecked
                     ? 'bg-emerald-50/40 border-emerald-200'
                     : (isT1Crit || isT2Crit || isT3Crit)
@@ -340,18 +376,27 @@ export function StockTable({
                     : 'bg-white border-slate-200 shadow-2xs'
                 }`}
               >
-                {/* Top Row: Checkbox + Kode Item + Index */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
+                {/* Top Row: Checkbox + Kode Item + Badges */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap min-w-0">
                     <span className="text-[11px] font-mono text-slate-400 font-bold">
                       #{index + 1}
                     </span>
                     <span className="font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-200">
                       {item.kodeItem}
                     </span>
+
+                    {/* Badge Penanda Selisih Stok Pusat */}
+                    {item.isDiscrepancy && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-500 text-white flex items-center gap-1 shadow-2xs">
+                        <AlertTriangle className="w-2.5 h-2.5" />
+                        Selisih Pusat
+                      </span>
+                    )}
+
                     {item.adminFlagged && (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-white flex items-center gap-1">
-                        <Flag className="w-3 h-3 fill-white" />
+                        <Flag className="w-2.5 h-2.5 fill-white" />
                         Terlewat
                       </span>
                     )}
@@ -389,15 +434,54 @@ export function StockTable({
                   </h4>
                 </div>
 
+                {/* Discrepancy Callout Banner on Card if marked */}
+                {item.isDiscrepancy && (
+                  <div className="mt-2 p-2.5 rounded-xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 text-xs text-orange-950 flex flex-col gap-1">
+                    <div className="flex items-center justify-between font-bold">
+                      <div className="flex items-center gap-1.5 text-orange-800">
+                        <AlertTriangle className="w-3.5 h-3.5 text-orange-600 shrink-0" />
+                        <span>Stok Pusat Tidak Sesuai:</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded font-mono text-[11px] font-extrabold ${
+                        diffPusat < 0 ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        Fisik: {item.stokPusatAktual} ({diffPusat > 0 ? `+${diffPusat}` : diffPusat})
+                      </span>
+                    </div>
+                    {item.discrepancyNote && (
+                      <p className="text-[11px] text-orange-900 italic">
+                        &ldquo;{item.discrepancyNote}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* 4-Cell Stock Matrix: Pusat, Sempu, Pilar, Serang */}
                 <div className="grid grid-cols-4 gap-1.5 mt-3 pt-2 border-t border-slate-100 text-center">
                   
-                  {/* Pusat */}
-                  <div className="p-1.5 rounded-xl bg-slate-50 border border-slate-200">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pusat</div>
-                    <div className="font-mono font-bold text-xs sm:text-sm text-slate-800 mt-0.5">
-                      {item.stokPusat.toLocaleString('id-ID')}
+                  {/* Pusat Cell with Discrepancy Display */}
+                  <div className={`p-1.5 rounded-xl border relative ${
+                    item.isDiscrepancy 
+                      ? 'bg-orange-100/70 border-orange-300 text-orange-950' 
+                      : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Pusat
                     </div>
+                    {item.isDiscrepancy ? (
+                      <div className="mt-0.5">
+                        <span className="line-through text-[10px] text-slate-400 block font-mono">
+                          {item.stokPusat}
+                        </span>
+                        <span className="font-mono font-black text-xs sm:text-sm text-orange-700 block">
+                          {item.stokPusatAktual}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="font-mono font-bold text-xs sm:text-sm text-slate-800 mt-0.5">
+                        {item.stokPusat.toLocaleString('id-ID')}
+                      </div>
+                    )}
                   </div>
 
                   {/* Sempu */}
@@ -466,8 +550,8 @@ export function StockTable({
                   </div>
                 )}
 
-                {/* Bottom Card Footer: Checker info & Admin action */}
-                <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+                {/* Bottom Card Footer: Actions for Discrepancy & Flagging */}
+                <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px] text-slate-500">
                   <div>
                     {item.isChecked && item.checkedAt ? (
                       <div className="flex items-center gap-1 text-emerald-700 font-semibold">
@@ -475,24 +559,43 @@ export function StockTable({
                         <span>Dicek {new Date(item.checkedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                     ) : (
-                      <span className="text-slate-400">Belum diverifikasi fisik</span>
+                      <span className="text-slate-400">Belum diverifikasi</span>
                     )}
                   </div>
 
-                  {currentRole === 'ADMIN' && (
+                  <div className="flex items-center gap-1.5">
+                    {/* Discrepancy Button for Petugas Cek and Admin */}
                     <button
                       type="button"
-                      onClick={() => onOpenFlagModal(item)}
-                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                        item.adminFlagged
-                          ? 'bg-amber-500 text-white'
-                          : 'bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200'
+                      disabled={isAuditFinalized}
+                      onClick={() => onOpenDiscrepancyModal(item)}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 ${
+                        item.isDiscrepancy
+                          ? 'bg-orange-600 text-white shadow-2xs'
+                          : 'bg-slate-100 hover:bg-orange-50 text-slate-700 hover:text-orange-800 border border-slate-200'
                       }`}
+                      title="Tandai jika stok fisik pusat tidak sesuai dengan sistem"
                     >
-                      <Flag className={`w-3 h-3 ${item.adminFlagged ? 'fill-white' : 'text-amber-600'}`} />
-                      <span>{item.adminFlagged ? 'Revisi Aktif' : 'Tandai'}</span>
+                      <SlidersHorizontal className="w-3 h-3" />
+                      <span>{item.isDiscrepancy ? 'Ubah Fisik' : 'Stok Tidak Sesuai'}</span>
                     </button>
-                  )}
+
+                    {/* Admin Flag Button */}
+                    {currentRole === 'ADMIN' && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenFlagModal(item)}
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                          item.adminFlagged
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200'
+                        }`}
+                      >
+                        <Flag className={`w-3 h-3 ${item.adminFlagged ? 'fill-white' : 'text-amber-600'}`} />
+                        <span>{item.adminFlagged ? 'Revisi Aktif' : 'Tandai'}</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
 
               </div>
@@ -507,7 +610,7 @@ export function StockTable({
           <thead>
             <tr className="bg-slate-100/90 text-slate-700 font-bold border-b border-slate-200 select-none">
               <th className="py-3 px-3 w-12 text-center text-slate-400">#</th>
-              <th className="py-3 px-3 min-w-[120px] uppercase tracking-wider text-[11px]">
+              <th className="py-3 px-3 min-w-[110px] uppercase tracking-wider text-[11px]">
                 Kode Item
               </th>
               <th className="py-3 px-4 min-w-[240px] uppercase tracking-wider text-[11px]">
@@ -518,22 +621,26 @@ export function StockTable({
                   </span>
                 </div>
               </th>
-              <th className="py-3 px-3 text-right min-w-[100px] uppercase tracking-wider text-[11px] text-slate-700">
-                Pusat
+              {/* Kolom 3: Stok Pusat (dengan penanda ketidaksesuaian stok) */}
+              <th className="py-3 px-3 text-right min-w-[130px] uppercase tracking-wider text-[11px] bg-slate-50 text-slate-700 border-l border-r border-slate-200">
+                <div className="flex flex-col items-end">
+                  <span>Pusat</span>
+                  <span className="text-[9px] font-normal text-slate-400">Tandai Jika Selisih</span>
+                </div>
               </th>
-              <th className="py-3 px-3 text-right min-w-[115px] uppercase tracking-wider text-[11px] bg-slate-50/50">
+              <th className="py-3 px-3 text-right min-w-[115px] uppercase tracking-wider text-[11px]">
                 <div className="flex flex-col items-end">
                   <span>Sempu</span>
                   <span className="text-[9px] font-normal text-slate-400">Tanda &le; {thresholdN}</span>
                 </div>
               </th>
-              <th className="py-3 px-3 text-right min-w-[115px] uppercase tracking-wider text-[11px] bg-slate-50/50">
+              <th className="py-3 px-3 text-right min-w-[115px] uppercase tracking-wider text-[11px]">
                 <div className="flex flex-col items-end">
                   <span>Pilar</span>
                   <span className="text-[9px] font-normal text-slate-400">Tanda &le; {thresholdN}</span>
                 </div>
               </th>
-              <th className="py-3 px-3 text-right min-w-[115px] uppercase tracking-wider text-[11px] bg-slate-50/50">
+              <th className="py-3 px-3 text-right min-w-[115px] uppercase tracking-wider text-[11px]">
                 <div className="flex flex-col items-end">
                   <span>Serang</span>
                   <span className="text-[9px] font-normal text-slate-400">Tanda &le; {thresholdN}</span>
@@ -546,9 +653,9 @@ export function StockTable({
                   <span className="text-[9px] font-normal text-indigo-600">Ceklis = Selesai</span>
                 </div>
               </th>
-              {/* Admin Validation Actions Column */}
-              <th className="py-3 px-3 text-center min-w-[130px] uppercase tracking-wider text-[11px] bg-slate-100 text-slate-700 border-l border-slate-200">
-                Validasi Admin
+              {/* Actions Column */}
+              <th className="py-3 px-3 text-center min-w-[140px] uppercase tracking-wider text-[11px] bg-slate-100 text-slate-700 border-l border-slate-200">
+                Aksi & Validasi
               </th>
             </tr>
           </thead>
@@ -569,6 +676,9 @@ export function StockTable({
                 const isT2Crit = item.stokToko2 <= thresholdN;
                 const isT3Crit = item.stokToko3 <= thresholdN;
                 const anyCrit = isT1Crit || isT2Crit || isT3Crit;
+                const diffPusat = item.isDiscrepancy && item.stokPusatAktual !== undefined && item.stokPusatAktual !== null 
+                  ? item.stokPusatAktual - item.stokPusat 
+                  : 0;
 
                 return (
                   <tr
@@ -576,6 +686,8 @@ export function StockTable({
                     className={`transition-colors group ${
                       item.adminFlagged
                         ? 'bg-amber-50/80 hover:bg-amber-100/70 border-l-4 border-l-amber-500'
+                        : item.isDiscrepancy
+                        ? 'bg-orange-50/30 hover:bg-orange-50/60 border-l-4 border-l-orange-500'
                         : item.isChecked
                         ? 'bg-emerald-50/30 hover:bg-emerald-50/70'
                         : anyCrit
@@ -601,6 +713,17 @@ export function StockTable({
                         {item.namaItem}
                       </div>
 
+                      {/* Discrepancy indicator under item name */}
+                      {item.isDiscrepancy && (
+                        <div className="mt-1 flex items-start gap-1.5 text-[11px] font-medium text-orange-900 bg-orange-100/80 border border-orange-300 rounded-md p-1.5">
+                          <AlertTriangle className="w-3.5 h-3.5 text-orange-600 shrink-0 mt-0.5" />
+                          <div>
+                            <strong>Stok Pusat Tidak Sesuai:</strong> Aktual <strong>{item.stokPusatAktual} unit</strong> (Sistem: {item.stokPusat}, Selisih: {diffPusat > 0 ? `+${diffPusat}` : diffPusat}).
+                            {item.discrepancyNote && <span className="block text-[10px] text-orange-800 italic mt-0.5">&ldquo;{item.discrepancyNote}&rdquo;</span>}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Flag notification banner inside row if admin flagged as missed */}
                       {item.adminFlagged && (
                         <div className="mt-1 flex items-start gap-1.5 text-[11px] font-medium text-amber-800 bg-amber-100/90 border border-amber-300 rounded-md p-1.5">
@@ -612,9 +735,47 @@ export function StockTable({
                       )}
                     </td>
 
-                    {/* 3. STOK PUSAT */}
-                    <td className="py-3 px-3 text-right font-mono font-medium text-slate-600">
-                      {item.stokPusat.toLocaleString('id-ID')}
+                    {/* 3. STOK PUSAT (Fitur Penandaan Stok Tidak Sesuai & Input Sebenarnya) */}
+                    <td className="py-3 px-3 text-right border-l border-r border-slate-200 bg-slate-50/40">
+                      {item.isDiscrepancy ? (
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="line-through text-slate-400 font-mono text-[10px]">
+                            Sistem: {item.stokPusat}
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono font-black text-xs bg-orange-100 text-orange-800 border border-orange-300">
+                            Aktual: {item.stokPusatAktual}
+                          </span>
+                          <span className={`text-[10px] font-bold font-mono ${
+                            diffPusat < 0 ? 'text-rose-600' : 'text-emerald-600'
+                          }`}>
+                            Selisih: {diffPusat > 0 ? `+${diffPusat}` : diffPusat}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={isAuditFinalized}
+                            onClick={() => onOpenDiscrepancyModal(item)}
+                            className="text-[10px] text-orange-700 hover:text-orange-900 underline font-semibold mt-0.5"
+                          >
+                            Ubah Fisik
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-end">
+                          <span className="font-mono font-medium text-slate-700 text-xs">
+                            {item.stokPusat.toLocaleString('id-ID')}
+                          </span>
+                          {!isAuditFinalized && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenDiscrepancyModal(item)}
+                              className="text-[10px] text-slate-400 hover:text-orange-700 hover:underline opacity-60 group-hover:opacity-100 transition-opacity mt-0.5"
+                              title="Tandai jika stok fisik gudang pusat berbeda"
+                            >
+                              + Selisih Fisik
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
 
                     {/* 4. STOK SEMPU (Format Penandaan <= N) */}
@@ -704,37 +865,55 @@ export function StockTable({
                       </div>
                     </td>
 
-                    {/* VALIDASI ADMIN COLUMN */}
+                    {/* AKSI & VALIDASI COLUMN */}
                     <td className="py-3 px-3 text-center border-l border-slate-200">
-                      {currentRole === 'ADMIN' ? (
+                      <div className="flex items-center justify-center gap-1.5">
+                        {/* Discrepancy Action Button */}
                         <button
                           type="button"
-                          onClick={() => onOpenFlagModal(item)}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                            item.adminFlagged
-                              ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-xs'
-                              : 'bg-white hover:bg-amber-50 border border-slate-300 text-slate-700 hover:text-amber-800'
+                          disabled={isAuditFinalized}
+                          onClick={() => onOpenDiscrepancyModal(item)}
+                          className={`p-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50 ${
+                            item.isDiscrepancy
+                              ? 'bg-orange-600 text-white shadow-2xs'
+                              : 'bg-white hover:bg-orange-50 border border-slate-300 text-slate-600 hover:text-orange-800'
                           }`}
-                          title="Jika serasa ada barang yang terlewat, admin memberikan tanda dan validasi ditangguhkan"
+                          title="Tandai stok fisik pusat tidak sesuai atau input stok sebenarnya"
                         >
-                          <Flag className={`w-3.5 h-3.5 ${item.adminFlagged ? 'fill-white' : 'text-amber-600'}`} />
-                          <span>{item.adminFlagged ? 'Revisi Aktif' : 'Tandai Terlewat'}</span>
+                          <SlidersHorizontal className="w-3.5 h-3.5" />
                         </button>
-                      ) : (
-                        item.adminFlagged ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
-                            <AlertTriangle className="w-3 h-3 text-amber-600" />
-                            <span>Perlu Dicek Ulang</span>
-                          </span>
-                        ) : item.isChecked ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Siap Divalidasi</span>
-                          </span>
+
+                        {/* Admin Flag Action Button */}
+                        {currentRole === 'ADMIN' ? (
+                          <button
+                            type="button"
+                            onClick={() => onOpenFlagModal(item)}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                              item.adminFlagged
+                                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-xs'
+                                : 'bg-white hover:bg-amber-50 border border-slate-300 text-slate-700 hover:text-amber-800'
+                            }`}
+                            title="Jika merasa ada barang yang terlewat, admin memberikan tanda dan validasi ditangguhkan"
+                          >
+                            <Flag className={`w-3.5 h-3.5 ${item.adminFlagged ? 'fill-white' : 'text-amber-600'}`} />
+                            <span>{item.adminFlagged ? 'Revisi Aktif' : 'Tandai'}</span>
+                          </button>
                         ) : (
-                          <span className="text-[11px] text-slate-400">Menunggu</span>
-                        )
-                      )}
+                          item.adminFlagged ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                              <AlertTriangle className="w-3 h-3 text-amber-600" />
+                              <span>Revisi</span>
+                            </span>
+                          ) : item.isChecked ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>OK</span>
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-slate-400">-</span>
+                          )
+                        )}
+                      </div>
                     </td>
 
                   </tr>
@@ -758,6 +937,10 @@ export function StockTable({
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
             <span>Hijau: Sudah Dicek</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block" />
+            <span>Oranye: Stok Pusat Tidak Sesuai</span>
           </span>
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
